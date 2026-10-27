@@ -12,7 +12,7 @@ sur le site est dans l'app aussitôt ; ce dépôt ne change que quand l'envelopp
 |---|---|
 | `project.yml` | Le projet, décrit pour **XcodeGen**. Le `.xcodeproj` est généré, jamais commité. |
 | `Commun/Coquille` | L'app : une vue web sur `JuclairianDepart` (Info.plist), liens externes dehors, dialogues du site. |
-| `Commun/Partage` | L'extension de partage : ouvre `JuclairianPartage` (Info.plist), `{url}` = le lien partagé. |
+| `Commun/Partage` | L'extension de partage : ouvre `JuclairianPartage` (Info.plist), `{url}` = le lien partagé. Elle pose le canal **`juclairianPartage`** : le site y voit qu'il est dans la feuille (il retire son menu) et y envoie `{ fini: true, texte }` quand tout est écrit — la fenêtre le montre, puis se ferme. Contrat avec le site : `nav.html` (`partageFini`) dans `juclairian`. |
 | `Commun/Web` | Ce que les deux partagent. ⚠️ Rien qui appelle `UIApplication.shared` : interdit dans une extension. |
 | `Apps/<App>` | Ce qui est propre à une app : son icône (1024 px, **sans canal alpha** — App Store refuse). Ses réglages (adresses, permissions) sont dans `project.yml` ; les `Info.plist` en sont générés dans `Plists/`, jamais commités. |
 | `.github/workflows/construire.yml` | Compile à chaque push ; signe et envoie dans TestFlight si la clé d'API est posée. |
