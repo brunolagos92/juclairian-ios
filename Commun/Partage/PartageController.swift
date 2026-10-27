@@ -50,6 +50,8 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
             vue.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
+        // Jamais un écran blanc : on dit qu'on lit, le temps que l'app d'origine remette ce qu'elle partage.
+        vue.loadHTMLString(Self.message("Lecture du partage…"), baseURL: nil)
         lirePartage { [weak self] lien, texte in self?.ouvrir(lien, texte: texte) }
     }
 
@@ -140,11 +142,18 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
                 groupe.leave()
             }
         }
-        groupe.notify(queue: .main) {
-            let (url, texte) = recu.lire()
+        /* ⚠️⚠️ L'ATTENTE EST BORNÉE (27 octobre 2026 — partage depuis l'app Amazon : « ça n'affiche rien »). La
+           fenêtre attendait le lien ET le texte avant de rien ouvrir : une app d'origine qui ne remet jamais
+           l'un des deux la laissait blanche pour toujours. Au bout de trois secondes, on part avec ce qu'on a ;
+           et l'on ne part qu'UNE fois. */
+        let partir = {
+            guard let pris = recu.prendre() else { return }
+            let (url, texte) = pris
             let reste = texte.map(Self.sansAdresses).flatMap { $0.isEmpty ? nil : $0 }
             rendre(url ?? texte.flatMap(Self.premiereAdresse), reste)
         }
+        groupe.notify(queue: .main) { partir() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { partir() }
     }
 
     /// ⚠️⚠️ LE TITRE DE LA PAGE PARTAGÉE, LU DEPUIS LE TÉLÉPHONE — sur DEMANDE de la page seulement
@@ -155,6 +164,9 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
         guard let lien = lienPartage else { return donnerTitre("") }
         var requete = URLRequest(url: lien, timeoutInterval: 7)
         requete.setValue("fr-FR,fr;q=0.9", forHTTPHeaderField: "Accept-Language")
+        // Comme Safari sur l'iPhone : Amazon sert sa vraie page à un navigateur, pas toujours à une app.
+        requete.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
+            + "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
         URLSession.shared.dataTask(with: requete) { [weak self] data, _, _ in
             let titre = data.flatMap(Self.titreHTML) ?? ""
             DispatchQueue.main.async { self?.donnerTitre(titre) }
@@ -255,5 +267,12 @@ private final class Recu: @unchecked Sendable {
     fileprivate var texte: String?
     private let verrou = NSLock()
     func poser(_ faire: (Recu) -> Void) { verrou.lock(); faire(self); verrou.unlock() }
-    func lire() -> (URL?, String?) { verrou.lock(); defer { verrou.unlock() }; return (url, texte) }
+    private var pris = false
+    /// Ce qu'on a reçu — la PREMIÈRE fois seulement (la fin des chargements ou les trois secondes).
+    func prendre() -> (URL?, String?)? {
+        verrou.lock(); defer { verrou.unlock() }
+        if pris { return nil }
+        pris = true
+        return (url, texte)
+    }
 }
