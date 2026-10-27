@@ -83,8 +83,9 @@ targets:
         CFBundleDisplayName: Orla
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        # La page d'Orla qui reçoit le partage ; {url} est remplacé par le lien partagé.
-        JuclairianPartage: https://juclairian.com/orla/ajouter-lieu/?url={url}
+        # La page d'Orla qui reçoit le partage ; {url} est remplacé par le lien partagé, {texte} par le
+        # texte qui l'accompagne (le titre, souvent — un livre Amazon).
+        JuclairianPartage: https://juclairian.com/orla/ajouter-lieu/?url={url}&texte={texte}
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PartageController

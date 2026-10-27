@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 /// L'extension de partage : la fenêtre qui s'ouvre quand on choisit l'app dans la feuille
 /// « Partager » (de Google Maps, de Safari…). Elle n'écrit RIEN elle-même : elle ouvre la page du
 /// site qui range ce qu'on partage — la même que celle de l'app, donc une seule règle d'écriture.
-/// L'adresse est la clé `JuclairianPartage` de son Info.plist, où `{url}` reçoit le lien partagé.
+/// L'adresse est la clé `JuclairianPartage` de son Info.plist, où `{url}` reçoit le lien partagé et
+/// `{texte}` le texte qui l'accompagne (sans ses adresses) — il porte souvent le titre de ce qu'on partage.
 ///
 /// La session est celle de cette fenêtre : on s'y connecte une fois, au premier partage, et la page
 /// de connexion la reprend seule ensuite (le cookie expire, le jeton de renouvellement reste).
@@ -14,8 +15,11 @@ import UniformTypeIdentifiers
 /// qu'elle est dans la feuille de partage (le site y retire son menu) ; quand tout est écrit, elle y
 /// envoie `{ fini: true, texte }` (`partageFini`, nav.html du site) : la fenêtre montre ce texte, puis
 /// se ferme. Sur une erreur, la page n'envoie rien et la fenêtre reste ouverte.
+/// La page peut aussi y DEMANDER le titre de la page partagée (`{ titre: true }`) : la fenêtre la lit
+/// depuis le téléphone et le rend dans `window.juclairianTitrePartage` (évènement `juclairian:titre`).
 final class PartageController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     private var vue: WKWebView!
+    private var lienPartage: URL?
     private static let canal = "juclairianPartage"
 
     override func viewDidLoad() {
@@ -46,9 +50,7 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
             vue.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
-        lirePartage { [weak self] lien in
-            DispatchQueue.main.async { self?.ouvrir(lien) }
-        }
+        lirePartage { [weak self] lien, texte in self?.ouvrir(lien, texte: texte) }
     }
 
     @objc private func fermer() {
@@ -57,7 +59,9 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     /// La page a tout écrit : on montre ce qu'elle dit, le temps de le lire, puis on rend la main.
     fileprivate func recu(_ corps: Any) {
-        guard let d = corps as? [String: Any], d["fini"] as? Bool == true else { return }
+        guard let d = corps as? [String: Any] else { return }
+        if d["titre"] as? Bool == true { return lireTitre() }
+        guard d["fini"] as? Bool == true else { return }
         let fin = UIView()
         fin.translatesAutoresizingMaskIntoConstraints = false
         fin.backgroundColor = Site.fond
@@ -90,16 +94,19 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in self?.fermer() }
     }
 
-    private func ouvrir(_ lien: URL?) {
+    private func ouvrir(_ lien: URL?, texte: String?) {
         guard let lien else {
             vue.loadHTMLString(Self.message("Rien à partager : aucun lien n'a été reçu."), baseURL: nil)
             return
         }
+        lienPartage = lien
         // Le lien voyage tout entier dans un seul paramètre : on encode aussi & = ? + #.
         var permis = CharacterSet.urlQueryAllowed
         permis.remove(charactersIn: "&=?+#")
-        let encode = lien.absoluteString.addingPercentEncoding(withAllowedCharacters: permis) ?? ""
-        let adresse = Site.reglage("JuclairianPartage").replacingOccurrences(of: "{url}", with: encode)
+        let encode = { (x: String) in x.addingPercentEncoding(withAllowedCharacters: permis) ?? "" }
+        let adresse = Site.reglage("JuclairianPartage")
+            .replacingOccurrences(of: "{url}", with: encode(lien.absoluteString))
+            .replacingOccurrences(of: "{texte}", with: encode(texte ?? ""))
         guard let url = URL(string: adresse) else {
             vue.loadHTMLString(Self.message("Adresse de partage invalide."), baseURL: nil)
             return
@@ -109,27 +116,84 @@ final class PartageController: UIViewController, WKNavigationDelegate, WKUIDeleg
 
     /// Le lien partagé : une URL si l'app d'origine en donne une, sinon la première adresse trouvée
     /// dans le texte partagé (Google Maps envoie souvent « Nom du lieu\nhttps://maps.app.goo.gl/… »).
-    private func lirePartage(_ rendre: @escaping (URL?) -> Void) {
+    /// Et le TEXTE qui l'accompagne, sans ses adresses — le titre de ce qu'on partage, souvent.
+    private func lirePartage(_ rendre: @escaping (URL?, String?) -> Void) {
         let pieces = (extensionContext?.inputItems as? [NSExtensionItem] ?? [])
             .flatMap { $0.attachments ?? [] }
         let typeURL = UTType.url.identifier, typeTexte = UTType.plainText.identifier
+        let recu = Recu(), groupe = DispatchGroup()
         if let piece = pieces.first(where: { $0.hasItemConformingToTypeIdentifier(typeURL) }) {
+            groupe.enter()
             piece.loadItem(forTypeIdentifier: typeURL, options: nil) { objet, _ in
-                if let url = objet as? URL, url.scheme?.hasPrefix("http") == true { return rendre(url) }
-                if let data = objet as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) {
-                    return rendre(url)
-                }
-                rendre(nil)
+                var u: URL?
+                if let x = objet as? URL, x.scheme?.hasPrefix("http") == true { u = x }
+                else if let data = objet as? Data, let x = URL(dataRepresentation: data, relativeTo: nil) { u = x }
+                recu.poser { $0.url = u }
+                groupe.leave()
             }
-            return
         }
         if let piece = pieces.first(where: { $0.hasItemConformingToTypeIdentifier(typeTexte) }) {
+            groupe.enter()
             piece.loadItem(forTypeIdentifier: typeTexte, options: nil) { objet, _ in
-                rendre((objet as? String).flatMap(Self.premiereAdresse))
+                let t = (objet as? String) ?? (objet as? Data).map { String(decoding: $0, as: UTF8.self) }
+                recu.poser { $0.texte = t }
+                groupe.leave()
             }
-            return
         }
-        rendre(nil)
+        groupe.notify(queue: .main) {
+            let (url, texte) = recu.lire()
+            let reste = texte.map(Self.sansAdresses).flatMap { $0.isEmpty ? nil : $0 }
+            rendre(url ?? texte.flatMap(Self.premiereAdresse), reste)
+        }
+    }
+
+    /// ⚠️⚠️ LE TITRE DE LA PAGE PARTAGÉE, LU DEPUIS LE TÉLÉPHONE — sur DEMANDE de la page seulement
+    /// (`{ titre: true }`, 27 octobre 2026). Un Kindle partagé depuis l'app Amazon n'a ni ISBN ni titre
+    /// dans son adresse, et Amazon refuse souvent sa page à un serveur — pas à un iPhone. On lit sa balise
+    /// `<title>` et on la rend à la page ; la page suivante la trouve aussi (script posé au chargement).
+    private func lireTitre() {
+        guard let lien = lienPartage else { return donnerTitre("") }
+        var requete = URLRequest(url: lien, timeoutInterval: 7)
+        requete.setValue("fr-FR,fr;q=0.9", forHTTPHeaderField: "Accept-Language")
+        URLSession.shared.dataTask(with: requete) { [weak self] data, _, _ in
+            let titre = data.flatMap(Self.titreHTML) ?? ""
+            DispatchQueue.main.async { self?.donnerTitre(titre) }
+        }.resume()
+    }
+
+    private func donnerTitre(_ titre: String) {
+        guard let json = try? JSONSerialization.data(withJSONObject: [titre]),
+              let tableau = String(data: json, encoding: .utf8) else { return }
+        let js = "window.juclairianTitrePartage = \(tableau)[0];"
+            + " window.dispatchEvent(new Event('juclairian:titre'));"
+        vue.configuration.userContentController.addUserScript(
+            WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        vue.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    private static func titreHTML(_ data: Data) -> String? {
+        let html = String(decoding: data.prefix(600_000), as: UTF8.self)
+        guard let motif = try? NSRegularExpression(pattern: "<title[^>]*>([\\s\\S]*?)</title>",
+                                                   options: .caseInsensitive),
+              let trouve = motif.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let plage = Range(trouve.range(at: 1), in: html) else { return nil }
+        return String(html[plage])
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Le texte partagé, sans ses adresses : ce qui reste est d'ordinaire le titre.
+    private static func sansAdresses(_ texte: String) -> String {
+        guard let detecteur = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        else { return texte }
+        var reste = texte
+        let plage = NSRange(texte.startIndex..., in: texte)
+        for m in detecteur.matches(in: texte, options: [], range: plage).reversed() {
+            if let r = Range(m.range, in: reste) { reste.removeSubrange(r) }
+        }
+        return String(reste.trimmingCharacters(in: .whitespacesAndNewlines).prefix(300))
     }
 
     private static func premiereAdresse(_ texte: String) -> URL? {
@@ -183,4 +247,13 @@ private final class Canal: NSObject, WKScriptMessageHandler {
     func userContentController(_ controleur: WKUserContentController, didReceive message: WKScriptMessage) {
         cible?.recu(message.body)
     }
+}
+
+/// Ce que la feuille de partage a remis — rempli depuis plusieurs fils, d'où le verrou.
+private final class Recu: @unchecked Sendable {
+    fileprivate var url: URL?
+    fileprivate var texte: String?
+    private let verrou = NSLock()
+    func poser(_ faire: (Recu) -> Void) { verrou.lock(); faire(self); verrou.unlock() }
+    func lire() -> (URL?, String?) { verrou.lock(); defer { verrou.unlock() }; return (url, texte) }
 }
