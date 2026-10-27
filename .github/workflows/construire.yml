@@ -2,12 +2,16 @@
 #
 # Deux étapes, et la seconde ne tourne que si les secrets existent :
 #   1. COMPILER pour le simulateur, sans signature : prouve que le code se construit. Sans compte.
-#   2. SIGNER et ENVOYER dans TestFlight : signature gérée par Apple (clé d'API, rôle Admin), le
-#      numéro de build est celui de l'exécution (il doit croître à chaque envoi).
+#   2. SIGNER et ENVOYER dans TestFlight : fastlane (fastlane/Fastfile). `match` garde le certificat
+#      de distribution et les profils App Store, chiffrés, dans la branche `signature` de ce dépôt ;
+#      le numéro de build est celui de l'exécution (il doit croître à chaque envoi).
 #
 # Réglages du dépôt (Settings → Secrets and variables → Actions) :
 #   secrets   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (le contenu du fichier .p8)
 # L'identifiant d'équipe n'est pas secret : il est écrit ici et dans project.yml (DEVELOPMENT_TEAM).
+# Le mot de passe de la branche `signature` est TIRÉ de la clé (son empreinte) : aucun secret de plus.
+# ⚠️ Changer de clé d'API rend donc la branche illisible : la supprimer, la construction suivante
+# recrée certificat et profils.
 #
 # ⚠️ Les minutes macOS de GitHub comptent DIX fois sur un dépôt privé : le .md ne relance rien.
 name: Construire
@@ -22,6 +26,8 @@ jobs:
   orla:
     runs-on: macos-15
     timeout-minutes: 30
+    permissions:
+      contents: write # match dépose certificat et profils dans la branche `signature`
     env:
       APPLE_TEAM_ID: DKUFT47Y46
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -44,6 +50,13 @@ jobs:
 
       - name: Signer et envoyer dans TestFlight
         if: env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
+          FASTLANE_OPT_OUT_USAGE: "1"
         run: |
           set -o pipefail
           CLE="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
@@ -77,26 +90,9 @@ jobs:
             ls -la "$ANCIEN" "$NOUVEAU" 2>&1 || true
           }
           trap 'releve' ERR
-          AUTH=(-allowProvisioningUpdates
-                -authenticationKeyPath "$CLE"
-                -authenticationKeyID "$ASC_KEY_ID"
-                -authenticationKeyIssuerID "$ASC_ISSUER_ID")
-          xcodebuild -project Juclairian.xcodeproj -scheme Orla -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Orla.xcarchive" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            "${AUTH[@]}" archive | tail -n 40
-          cat > "$RUNNER_TEMP/export.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>teamID</key><string>$APPLE_TEAM_ID</string>
-            <key>manageAppVersionAndBuildNumber</key><false/>
-          </dict></plist>
-          EOF
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Orla.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/export" \
-            "${AUTH[@]}" | tail -n 40
+          export ASC_KEY_PATH="$CLE"
+          export MATCH_PASSWORD="$(shasum -a 256 "$CLE" | cut -c1-64)"
+          echo "::add-mask::$MATCH_PASSWORD"
+          command -v fastlane >/dev/null || brew install fastlane
+          fastlane ios testflight_orla
           rm -f "$CLE"

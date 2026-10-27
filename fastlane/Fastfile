@@ -1,0 +1,61 @@
+# Signer et envoyer dans TestFlight — appelé par .github/workflows/construire.yml.
+#
+# ⚠️ POURQUOI FASTLANE ET LA SIGNATURE MANUELLE. La signature automatique de Xcode a échoué six fois
+# sur la machine de GitHub, qui repart de zéro à chaque construction : il lui faut un profil de
+# DÉVELOPPEMENT (donc un appareil enregistré), il en recrée de nouveaux à chaque passage, et l'app et
+# son extension se disputent leur création — le relevé de l'essai 6 montrait UN profil présent pour
+# deux réclamés. Ici, `match` crée UNE FOIS le certificat de distribution et les deux profils App
+# Store, les garde chiffrés dans la branche `signature` de ce dépôt, et chaque construction les
+# reprend tels quels. Ni appareil, ni profil de développement, ni course entre les cibles.
+#
+# Les profils portent les noms que project.yml attend en Release : « match AppStore <identifiant> ».
+
+require "base64"
+
+default_platform(:ios)
+
+APPS = ["com.juclairian.orla", "com.juclairian.orla.partage"]
+
+platform :ios do
+  lane :testflight_orla do
+    setup_ci # un trousseau temporaire, propre à cette construction
+
+    cle = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_PATH"),
+      in_house: false
+    )
+
+    match(
+      type: "appstore",
+      app_identifier: APPS,
+      team_id: ENV.fetch("APPLE_TEAM_ID"),
+      api_key: cle,
+      storage_mode: "git",
+      git_url: "https://github.com/brunolagos92/juclairian-ios.git",
+      git_branch: "signature",
+      git_basic_authorization: Base64.strict_encode64("x-access-token:#{ENV.fetch('GITHUB_TOKEN')}"),
+      # La machine de GitHub n'a pas d'identité git : sans elle, le premier dépôt des profils échoue.
+      git_full_name: "github-actions[bot]",
+      git_user_email: "41898282+github-actions[bot]@users.noreply.github.com",
+      # setup_ci met match en lecture seule ; ici il doit pouvoir créer ce qui manque la première
+      # fois. Ensuite il reprend l'existant.
+      readonly: false
+    )
+
+    build_app(
+      project: "Juclairian.xcodeproj",
+      scheme: "Orla",
+      configuration: "Release",
+      export_method: "app-store",
+      xcargs: "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}",
+      output_directory: ENV.fetch("RUNNER_TEMP"),
+      export_options: {
+        provisioningProfiles: APPS.to_h { |id| [id, "match AppStore #{id}"] }
+      }
+    )
+
+    upload_to_testflight(api_key: cle, skip_waiting_for_build_processing: true)
+  end
+end

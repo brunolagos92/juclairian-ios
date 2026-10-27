@@ -29,6 +29,13 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.juclairian.orla
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      # L'envoi dans TestFlight signe à la main, avec le profil que fastlane match a créé
+      # (fastlane/Fastfile). En Debug, Xcode garde la main.
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.orla
     info:
       path: Plists/Orla-Info.plist
       properties:
@@ -65,6 +72,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.juclairian.orla.partage
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.orla.partage
     info:
       path: Plists/OrlaPartage-Info.plist
       properties:
