@@ -28,7 +28,7 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Générer le projet Xcode
         run: |
@@ -47,7 +47,20 @@ jobs:
         run: |
           set -o pipefail
           CLE="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
-          printf '%s' "$ASC_KEY_P8" > "$CLE"
+          # ⚠️ LA CLÉ EST RECONSTRUITE, PAS RECOPIÉE. Collée dans le secret, elle avait perdu sa forme
+          # (premier envoi : « invalidPEMDocument ») — sauts de ligne fondus, en-têtes absents ou
+          # espaces parasites. On n'en garde que le corps en base64, et on le remet en PEM exact :
+          # en-tête, lignes de 64 caractères, pied. Une clé bien collée en ressort identique.
+          printf '%s' "$ASC_KEY_P8" | python3 -c '
+          import re, sys
+          t = sys.stdin.read()
+          t = re.sub(r"-----(BEGIN|END)[^-]*-----", "", t)
+          corps = re.sub(r"[^A-Za-z0-9+/=]", "", t)
+          if len(corps) < 100:
+              sys.exit("ASC_KEY_P8 : le secret ne contient pas de clé (%d caractères utiles)" % len(corps))
+          lignes = [corps[i:i + 64] for i in range(0, len(corps), 64)]
+          print("-----BEGIN PRIVATE KEY-----\n" + "\n".join(lignes) + "\n-----END PRIVATE KEY-----")
+          ' > "$CLE"
           AUTH=(-allowProvisioningUpdates
                 -authenticationKeyPath "$CLE"
                 -authenticationKeyID "$ASC_KEY_ID"
