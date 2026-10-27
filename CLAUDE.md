@@ -24,9 +24,11 @@ icône. Rien dans `Commun/` ne doit nommer une app.
 
 - **Pas de Mac ici** : on ne compile pas dans la session. La seule preuve qu'un changement se construit
   est le passage de `construire.yml` sur GitHub — on ne dit pas « ça marche » avant de l'avoir lu.
-- **On ne pousse que sur demande de Bruno** (« push »), comme dans les autres dépôts : un push
-  construit et, la clé posée, **livre** une version dans TestFlight. Et les minutes macOS de GitHub
-  comptent dix fois sur un dépôt privé.
+- **Ici, on pousse SANS demander** : « oui, pousse sans me demander sur juclairian-ios » (Bruno,
+  27/10/2026), après six allers-retours pour mettre la construction au point. C'est propre à CE dépôt
+  — les autres gardent leur règle. Mais on ne revient vers Bruno qu'avec un résultat : l'app dans
+  TestFlight, ou ce qui bloque vraiment et ce qu'il doit faire. Et on pousse peu : les minutes macOS
+  de GitHub comptent dix fois sur un dépôt privé — un essai doit être sûr avant de partir.
 - **La session de l'extension est la sienne** : on s'y connecte une fois, au premier partage ; la page
   de connexion du site la reprend seule ensuite. Partager la session de l'app viendra si ça gêne.
 - Le reste de la doctrine (proposer avant de faire, ne pas supposer, mesurer) est celle des autres
