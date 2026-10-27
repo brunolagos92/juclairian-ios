@@ -14,10 +14,16 @@ require "base64"
 
 default_platform(:ios)
 
-APPS = ["com.juclairian.orla", "com.juclairian.orla.partage"]
+# Chaque app : son schéma, son identifiant, celui de son extension. Une app de plus = une ligne ici, ses
+# cibles dans project.yml, et sa fiche App Store Connect créée à la main (CLAUDE.md).
+APPS = {
+  "Orla" => ["com.juclairian.orla", "com.juclairian.orla.partage"],
+  "Vela" => ["com.juclairian.vela", "com.juclairian.vela.partage"],
+}
+IDS = APPS.values.flatten
 
 platform :ios do
-  lane :testflight_orla do
+  lane :testflight do
     setup_ci # un trousseau temporaire, propre à cette construction
 
     cle = app_store_connect_api_key(
@@ -30,7 +36,7 @@ platform :ios do
     # ⚠️ Les identifiants de l'app et de son extension doivent EXISTER chez Apple avant leurs profils.
     # La signature automatique se contentait du joker « XC Wildcard » : l'essai 7 a trouvé le compte
     # sans aucun identifiant (« Couldn't find bundle identifier »). On les déclare s'ils manquent.
-    APPS.each do |id|
+    IDS.each do |id|
       next if Spaceship::ConnectAPI::BundleId.find(id)
       nom = id.split(".").drop(2).map(&:capitalize).join(" ") # « Orla », « Orla Partage »
       UI.message("Déclaration de l'identifiant #{id} (#{nom})")
@@ -39,7 +45,7 @@ platform :ios do
 
     match(
       type: "appstore",
-      app_identifier: APPS,
+      app_identifier: IDS,
       team_id: ENV.fetch("APPLE_TEAM_ID"),
       api_key: cle,
       storage_mode: "git",
@@ -54,25 +60,34 @@ platform :ios do
       readonly: false
     )
 
-    build_app(
-      project: "Juclairian.xcodeproj",
-      scheme: "Orla",
-      configuration: "Release",
-      export_method: "app-store",
-      xcargs: "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}",
-      output_directory: ENV.fetch("RUNNER_TEMP"),
-      export_options: {
-        provisioningProfiles: APPS.to_h { |id| [id, "match AppStore #{id}"] }
-      }
-    )
-
-    # L'API d'Apple ne sait pas créer la fiche de l'app dans App Store Connect : c'est à la main, une
-    # fois. On le dit en clair plutôt que de laisser l'envoi échouer sur un message obscur.
-    unless Spaceship::ConnectAPI::App.find(APPS.first)
-      UI.user_error!("Construit et signé, mais pas envoyé : l'app #{APPS.first} n'existe pas encore " \
+    # ⚠️ CHAQUE APP POUR ELLE-MÊME : une fiche App Store Connect qui manque (une app neuve) n'empêche pas les
+    # autres de partir. On construit tout, on envoie ce qui a sa fiche, et l'on DIT à la fin ce qui attend.
+    sans_fiche = []
+    APPS.each do |schema, ids|
+      build_app(
+        project: "Juclairian.xcodeproj",
+        scheme: schema,
+        configuration: "Release",
+        export_method: "app-store",
+        xcargs: "CURRENT_PROJECT_VERSION=#{ENV.fetch('GITHUB_RUN_NUMBER')}",
+        output_directory: ENV.fetch("RUNNER_TEMP"),
+        output_name: schema,
+        export_options: {
+          provisioningProfiles: ids.to_h { |id| [id, "match AppStore #{id}"] }
+        }
+      )
+      # L'API d'Apple ne sait pas créer la fiche de l'app dans App Store Connect : c'est à la main, une
+      # fois. On le dit en clair plutôt que de laisser l'envoi échouer sur un message obscur.
+      unless Spaceship::ConnectAPI::App.find(ids.first)
+        sans_fiche << "#{schema} (#{ids.first})"
+        next
+      end
+      upload_to_testflight(api_key: cle, ipa: lane_context[SharedValues::IPA_OUTPUT_PATH],
+                           skip_waiting_for_build_processing: true)
+    end
+    unless sans_fiche.empty?
+      UI.user_error!("Construit et signé, mais pas envoyé : #{sans_fiche.join(', ')} n'existe pas encore " \
                      "dans App Store Connect (Apps → + → Nouvelle app).")
     end
-
-    upload_to_testflight(api_key: cle, skip_waiting_for_build_processing: true)
   end
 end

@@ -27,7 +27,7 @@ on:
     - cron: "17 3 1 */2 *"
 
 jobs:
-  orla:
+  apps:
     # ⚠️ macos-26, pour Xcode 26 : depuis 2026, Apple refuse tout envoi construit avec un SDK plus
     # ancien (essai 9, signé et prêt, rejeté : « built with the iOS 18.5 SDK … must be built with
     # the iOS 26 SDK or later »). macos-15 donnait Xcode 16.4.
@@ -51,9 +51,11 @@ jobs:
       - name: Compiler (simulateur, sans signature)
         run: |
           set -o pipefail
-          xcodebuild -project Juclairian.xcodeproj -scheme Orla \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+          for app in Orla Vela; do
+            xcodebuild -project Juclairian.xcodeproj -scheme "$app" \
+              -destination 'generic/platform=iOS Simulator' \
+              CODE_SIGNING_ALLOWED=NO build | tail -n 20
+          done
 
       - name: Signer et envoyer dans TestFlight
         if: env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
@@ -101,5 +103,5 @@ jobs:
           export MATCH_PASSWORD="$(shasum -a 256 "$CLE" | cut -c1-64)"
           echo "::add-mask::$MATCH_PASSWORD"
           command -v fastlane >/dev/null || brew install fastlane
-          fastlane ios testflight_orla
+          fastlane ios testflight
           rm -f "$CLE"

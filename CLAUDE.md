@@ -19,7 +19,14 @@ sur le site est dans l'app aussitôt ; ce dépôt ne change que quand l'envelopp
 | `fastlane/Fastfile` | La signature et l'envoi. `match` crée une fois le certificat de distribution et les profils App Store, et les garde **chiffrés dans la branche `signature`** — jamais à la main, jamais fusionnée dans `main`. |
 
 **Une app de plus** = une cible et son extension dans `project.yml`, un dossier `Apps/<App>` avec son
-icône. Rien dans `Commun/` ne doit nommer une app.
+icône (1024 px, RGB sans alpha — tirée de celle du site, `scripts/suivi.mjs` de `juclairian`), une ligne
+dans `APPS` du `Fastfile`, son schéma dans l'étape « Compiler » de `construire.yml` — et **sa fiche App
+Store Connect créée à la main par Bruno** (Apps → + → Nouvelle app, nom « <App> Juclairian », identifiant
+`com.juclairian.<app>`), une fois que la construction a déclaré l'identifiant. D'ici là, la construction
+envoie les autres et dit laquelle attend. Rien dans `Commun/` ne doit nommer une app.
+
+**Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`) et **Vela** (`/voyages/`, partage →
+`/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée).
 
 ## Consignes
 
