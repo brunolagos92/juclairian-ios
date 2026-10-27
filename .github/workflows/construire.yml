@@ -24,7 +24,10 @@ on:
 
 jobs:
   orla:
-    runs-on: macos-15
+    # ⚠️ macos-26, pour Xcode 26 : depuis 2026, Apple refuse tout envoi construit avec un SDK plus
+    # ancien (essai 9, signé et prêt, rejeté : « built with the iOS 18.5 SDK … must be built with
+    # the iOS 26 SDK or later »). macos-15 donnait Xcode 16.4.
+    runs-on: macos-26
     timeout-minutes: 30
     permissions:
       contents: write # match dépose certificat et profils dans la branche `signature`
