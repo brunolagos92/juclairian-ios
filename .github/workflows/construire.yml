@@ -61,12 +61,22 @@ jobs:
           lignes = [corps[i:i + 64] for i in range(0, len(corps), 64)]
           print("-----BEGIN PRIVATE KEY-----\n" + "\n".join(lignes) + "\n-----END PRIVATE KEY-----")
           ' > "$CLE"
-          # ⚠️ Xcode 16 range les profils qu'il télécharge dans UserData/Provisioning Profiles, mais ne
-          # crée pas ce dossier sur une machine neuve : le profil était bien créé chez Apple, puis
-          # introuvable (« Build input file cannot be found … .mobileprovision »). On crée les deux
-          # dossiers, l'ancien et le nouveau, avant de construire.
-          mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
-                   "$HOME/Library/MobileDevice/Provisioning Profiles"
+          # ⚠️ Xcode 16 CHERCHE les profils dans UserData/Provisioning Profiles mais les ÉCRIT ailleurs :
+          # le profil était bien créé chez Apple, puis introuvable (« Build input file cannot be found
+          # … .mobileprovision »), que le dossier existe ou non (essais 4 et 5). Le nouveau dossier
+          # devient un renvoi vers l'ancien : les deux chemins mènent au même endroit.
+          ANCIEN="$HOME/Library/MobileDevice/Provisioning Profiles"
+          NOUVEAU="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          mkdir -p "$ANCIEN" "$(dirname "$NOUVEAU")"
+          rm -rf "$NOUVEAU"
+          ln -s "$ANCIEN" "$NOUVEAU"
+          # En cas d'échec, on relève OÙ sont les profils au lieu de le supposer.
+          releve() {
+            echo "── Profils présents sur la machine :"
+            find "$HOME/Library" -name '*.mobileprovision' 2>/dev/null || true
+            ls -la "$ANCIEN" "$NOUVEAU" 2>&1 || true
+          }
+          trap 'releve' ERR
           AUTH=(-allowProvisioningUpdates
                 -authenticationKeyPath "$CLE"
                 -authenticationKeyID "$ASC_KEY_ID"
