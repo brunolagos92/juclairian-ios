@@ -36,6 +36,17 @@ icône. Rien dans `Commun/` ne doit nommer une app.
   dans `APPS` du `Fastfile`, et `PROVISIONING_PROFILE_SPECIFIER: match AppStore <identifiant>` en
   Release dans `project.yml`. Le mot de passe de `signature` est tiré de la clé d'API : changer de
   clé = supprimer la branche, la construction suivante recrée tout.
+- **Ce qui a fait passer le premier envoi** (Orla, build 10, 27/10/2026 — dix essais) :
+  - **Xcode 26 obligatoire** : Apple refuse tout envoi construit avec un SDK plus ancien. D'où
+    `runs-on: macos-26` ; macos-15 donnait Xcode 16.4 (essai 9, signé puis rejeté).
+  - **Les identifiants (bundle ID) doivent exister chez Apple** : le `Fastfile` déclare ceux qui
+    manquent. La signature automatique se contentait du joker « XC Wildcard ».
+  - **La fiche de l'app dans App Store Connect se crée À LA MAIN**, une fois par app : l'API d'Apple
+    ne le permet pas. Orla y porte le nom « Orla Juclairian » (le nom public doit être unique sur
+    tout l'App Store ; sous l'icône, c'est `CFBundleDisplayName` qui s'affiche). Une app de plus =
+    demander à Bruno de la créer, avec son identifiant, AVANT le premier envoi.
+  - **TestFlight interne** : être propriétaire du compte ne suffit pas, il faut un groupe interne
+    avec Bruno dedans (fait pour Orla, distribution automatique).
 - **La session de l'extension est la sienne** : on s'y connecte une fois, au premier partage ; la page
   de connexion du site la reprend seule ensuite. Partager la session de l'app viendra si ça gêne.
 - Le reste de la doctrine (proposer avant de faire, ne pas supposer, mesurer) est celle des autres
