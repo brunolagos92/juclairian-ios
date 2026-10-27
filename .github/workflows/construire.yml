@@ -21,6 +21,10 @@ on:
     branches: [main]
     paths-ignore: ["**.md"]
   workflow_dispatch:
+  # ⚠️ Une version TestFlight EXPIRE au bout de 90 jours : sans push pendant trois mois, l'app ne
+  # s'ouvrirait plus. Une reconstruction le 1er des mois impairs garde toujours une version vivante.
+  schedule:
+    - cron: "17 3 1 */2 *"
 
 jobs:
   orla:
