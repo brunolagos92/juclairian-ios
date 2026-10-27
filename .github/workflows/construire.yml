@@ -1,0 +1,73 @@
+# Construire les apps, et les envoyer dans TestFlight quand la clé d'API est posée.
+#
+# Deux étapes, et la seconde ne tourne que si les secrets existent :
+#   1. COMPILER pour le simulateur, sans signature : prouve que le code se construit. Sans compte.
+#   2. SIGNER et ENVOYER dans TestFlight : signature gérée par Apple (clé d'API, rôle Admin), le
+#      numéro de build est celui de l'exécution (il doit croître à chaque envoi).
+#
+# Réglages du dépôt (Settings → Secrets and variables → Actions) :
+#   secrets   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (le contenu du fichier .p8)
+#   variable  APPLE_TEAM_ID (l'identifiant d'équipe, 10 caractères — il n'est pas secret)
+#
+# ⚠️ Les minutes macOS de GitHub comptent DIX fois sur un dépôt privé : le .md ne relance rien.
+name: Construire
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+jobs:
+  orla:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Générer le projet Xcode
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Compiler (simulateur, sans signature)
+        run: |
+          set -o pipefail
+          xcodebuild -project Juclairian.xcodeproj -scheme Orla \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+
+      - name: Signer et envoyer dans TestFlight
+        if: env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != ''
+        run: |
+          set -o pipefail
+          CLE="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s' "$ASC_KEY_P8" > "$CLE"
+          AUTH=(-allowProvisioningUpdates
+                -authenticationKeyPath "$CLE"
+                -authenticationKeyID "$ASC_KEY_ID"
+                -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild -project Juclairian.xcodeproj -scheme Orla -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Orla.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            "${AUTH[@]}" archive | tail -n 40
+          cat > "$RUNNER_TEMP/export.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Orla.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/export" \
+            "${AUTH[@]}" | tail -n 40
+          rm -f "$CLE"

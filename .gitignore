@@ -1,0 +1,9 @@
+# Généré par XcodeGen à partir de project.yml
+*.xcodeproj/
+build/
+DerivedData/
+# Une clé d'API ne se commite jamais
+*.p8
+.DS_Store
+# Les Info.plist sont générés par XcodeGen depuis project.yml
+Plists/
