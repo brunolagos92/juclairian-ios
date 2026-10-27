@@ -2,7 +2,7 @@
 
 Les apps natives des outils Juclairian, distribuées en **TestFlight interne** (pas d'App Store, donc
 pas de revue d'Apple à chaque version). Chacune est une **coquille** qui ouvre le site, plus une
-**extension de partage**. Le code de l'app (écrans, logique, données) **n'est pas ici** : il est sur le
+**extension de partage** quand quelque chose se partage vers elle (Hora n'en a pas). Le code de l'app (écrans, logique, données) **n'est pas ici** : il est sur le
 site, dans `juclairian` (Vela, Orla, Hora…) et `juclairian-app` (Patrimonia, Numeria, Livria). Un push
 sur le site est dans l'app aussitôt ; ce dépôt ne change que quand l'enveloppe change.
 
@@ -25,8 +25,11 @@ Store Connect créée à la main par Bruno** (Apps → + → Nouvelle app, nom �
 `com.juclairian.<app>`), une fois que la construction a déclaré l'identifiant. D'ici là, la construction
 envoie les autres et dit laquelle attend. Rien dans `Commun/` ne doit nommer une app.
 
-**Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`) et **Vela** (`/voyages/`, partage →
-`/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée).
+**Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`), **Vela** (`/voyages/`, partage →
+`/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée) et **Hora** (`/echeances/`, sans
+extension : aucune page de Hora ne reçoit un lien ; ni photo ni position, donc aucune phrase de permission).
+Leur icône vient de `scripts/suivi.mjs` (`icone`, `iconeOrla`, `iconeHora`) : celle de Hora sort en RGBA
+opaque, l'alpha s'ôte sans rien changer à l'image.
 
 ## Consignes
 

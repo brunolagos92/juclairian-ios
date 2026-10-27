@@ -51,7 +51,7 @@ jobs:
       - name: Compiler (simulateur, sans signature)
         run: |
           set -o pipefail
-          for app in Orla Vela; do
+          for app in Orla Vela Hora; do
             xcodebuild -project Juclairian.xcodeproj -scheme "$app" \
               -destination 'generic/platform=iOS Simulator' \
               CODE_SIGNING_ALLOWED=NO build | tail -n 20
