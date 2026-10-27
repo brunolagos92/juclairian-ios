@@ -27,6 +27,16 @@ platform :ios do
       in_house: false
     )
 
+    # ⚠️ Les identifiants de l'app et de son extension doivent EXISTER chez Apple avant leurs profils.
+    # La signature automatique se contentait du joker « XC Wildcard » : l'essai 7 a trouvé le compte
+    # sans aucun identifiant (« Couldn't find bundle identifier »). On les déclare s'ils manquent.
+    APPS.each do |id|
+      next if Spaceship::ConnectAPI::BundleId.find(id)
+      nom = id.split(".").drop(2).map(&:capitalize).join(" ") # « Orla », « Orla Partage »
+      UI.message("Déclaration de l'identifiant #{id} (#{nom})")
+      Spaceship::ConnectAPI::BundleId.create(name: nom, platform: "IOS", identifier: id)
+    end
+
     match(
       type: "appstore",
       app_identifier: APPS,
@@ -55,6 +65,13 @@ platform :ios do
         provisioningProfiles: APPS.to_h { |id| [id, "match AppStore #{id}"] }
       }
     )
+
+    # L'API d'Apple ne sait pas créer la fiche de l'app dans App Store Connect : c'est à la main, une
+    # fois. On le dit en clair plutôt que de laisser l'envoi échouer sur un message obscur.
+    unless Spaceship::ConnectAPI::App.find(APPS.first)
+      UI.user_error!("Construit et signé, mais pas envoyé : l'app #{APPS.first} n'existe pas encore " \
+                     "dans App Store Connect (Apps → + → Nouvelle app).")
+    end
 
     upload_to_testflight(api_key: cle, skip_waiting_for_build_processing: true)
   end
