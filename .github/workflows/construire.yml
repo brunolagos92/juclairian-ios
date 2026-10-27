@@ -7,7 +7,7 @@
 #
 # Réglages du dépôt (Settings → Secrets and variables → Actions) :
 #   secrets   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (le contenu du fichier .p8)
-#   variable  APPLE_TEAM_ID (l'identifiant d'équipe, 10 caractères — il n'est pas secret)
+# L'identifiant d'équipe n'est pas secret : il est écrit ici et dans project.yml (DEVELOPMENT_TEAM).
 #
 # ⚠️ Les minutes macOS de GitHub comptent DIX fois sur un dépôt privé : le .md ne relance rien.
 name: Construire
@@ -23,7 +23,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     env:
-      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APPLE_TEAM_ID: DKUFT47Y46
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
