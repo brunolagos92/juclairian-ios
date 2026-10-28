@@ -35,8 +35,9 @@ d'où l'exception ATS `NSAllowsArbitraryLoadsInWebContent`, propre à sa cible ;
 Leur icône vient de `scripts/suivi.mjs` (`icone`, `iconeOrla`, `iconeHora`) : celle de Hora sort en RGBA
 opaque, l'alpha s'ôte sans rien changer à l'image. Celle de Numeria vient de `numeria/assets/icon.svg`
 (`juclairian-app`), rendue en 1024 px par Chromium **sans son arrondi** (`rx="40"` ôté du fond) : iOS pose
-son propre masque, un arrondi dessiné laisserait ses coins. Celle d'Electra est **provisoire** : un « E » aux
-couleurs de Hora, faute d'en connaître une — à remplacer par la sienne si Bruno en donne une.
+son propre masque, un arrondi dessiné laisserait ses coins. Celle d'Electra est la sienne (la maison et l'éclair,
+servie par Electra à `/icone.svg`, que Bruno a collée) : gardée dans `Apps/Electra/icone.svg`, sans l'arrondi de
+son fond, car son code n'est dans aucun dépôt.
 
 ## Consignes
 
