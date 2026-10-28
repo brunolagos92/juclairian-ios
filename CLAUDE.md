@@ -29,11 +29,14 @@ envoie les autres et dit laquelle attend. Rien dans `Commun/` ne doit nommer une
 `/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée), **Hora** (`/echeances/`, sans
 extension : aucune page de Hora ne reçoit un lien ; ni photo ni position, donc aucune phrase de permission)
 et **Numeria** (`https://numeria.juclairian.com/`, son propre site, dépôt `juclairian-app` ; sans extension ;
-son import CSV passe par le sélecteur de fichiers, sans appareil photo).
+son import CSV passe par le sélecteur de fichiers, sans appareil photo) et **Electra**
+(`http://100.112.244.82:8321/` — elle ne tourne que sur le Mac de Bruno, que l'iPhone joint par **Tailscale** ;
+d'où l'exception ATS `NSAllowsArbitraryLoadsInWebContent`, propre à sa cible ; son code n'est dans aucun dépôt).
 Leur icône vient de `scripts/suivi.mjs` (`icone`, `iconeOrla`, `iconeHora`) : celle de Hora sort en RGBA
 opaque, l'alpha s'ôte sans rien changer à l'image. Celle de Numeria vient de `numeria/assets/icon.svg`
 (`juclairian-app`), rendue en 1024 px par Chromium **sans son arrondi** (`rx="40"` ôté du fond) : iOS pose
-son propre masque, un arrondi dessiné laisserait ses coins.
+son propre masque, un arrondi dessiné laisserait ses coins. Celle d'Electra est **provisoire** : un « E » aux
+couleurs de Hora, faute d'en connaître une — à remplacer par la sienne si Bruno en donne une.
 
 ## Consignes
 
