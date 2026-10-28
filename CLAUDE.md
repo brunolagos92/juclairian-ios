@@ -61,6 +61,10 @@ son propre masque, un arrondi dessiné laisserait ses coins.
     demander à Bruno de la créer, avec son identifiant, AVANT le premier envoi.
   - **TestFlight interne** : être propriétaire du compte ne suffit pas, il faut un groupe interne
     avec Bruno dedans (fait pour Orla, distribution automatique).
+- ⚠️ **Ce que Bruno fait dans App Store Connect, il le fait** — la fiche, puis son groupe de test
+  interne. Le lui rappeler une fois qu'il a dit « fait » suppose qu'il ne l'a pas fait (« évidemment
+  c'est fait. Pourquoi toujours supposer ce genre de choses ? », 28/10/2026). On ne lui dit que ce
+  qu'on ne peut pas faire soi-même, une fois.
 - **La session de l'extension est la sienne** : on s'y connecte une fois, au premier partage ; la page
   de connexion du site la reprend seule ensuite. Partager la session de l'app viendra si ça gêne.
 - Le reste de la doctrine (proposer avant de faire, ne pas supposer, mesurer) est celle des autres
