@@ -28,9 +28,8 @@ IDS = APPS.values.flatten
 # Les capacités qu'une app porte chez Apple, et le droit que son profil doit alors contenir. ⚠️ Déclarer une
 # capacité rend « invalides » les profils de l'identifiant : match les recrée (il les voit invalides) ; on
 # vérifie quand même, après lui, que le profil porte le droit — et on le refait sinon.
-CAPACITES = {
-  "com.juclairian.electra" => { "PUSH_NOTIFICATIONS" => "aps-environment" },
-}
+# Toute app (pas ses extensions) peut recevoir des notifications : « la possibilité pour toutes les apps » (Bruno).
+CAPACITES = APPS.values.map(&:first).to_h { |id| [id, { "PUSH_NOTIFICATIONS" => "aps-environment" }] }
 
 platform :ios do
   lane :testflight do

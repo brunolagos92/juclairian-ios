@@ -1,5 +1,9 @@
 # Le projet Xcode est GÉNÉRÉ à partir de ce fichier (XcodeGen) : il n'est jamais écrit à la main ni
 # commité. Une app de plus = une cible de plus ici, plus son dossier dans Apps/ et Extensions/.
+#
+# ⚠️ TOUTE APP PEUT RECEVOIR DES NOTIFICATIONS (« la possibilité pour toutes les apps. Après j'utilise ou pas »,
+# Bruno, 28/10/2026) : chacune porte le droit `aps-environment: production` (celui de TestFlight) et la clé
+# `JuclairianNotifications` ; le Fastfile déclare la capacité chez Apple. Une app neuve fait de même.
 name: Juclairian
 options:
   bundleIdPrefix: com.juclairian
@@ -36,6 +40,10 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: Apple Distribution
           PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.orla
+    entitlements:
+      path: Plists/Orla.entitlements
+      properties:
+        aps-environment: production
     info:
       path: Plists/Orla-Info.plist
       properties:
@@ -44,6 +52,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # L'adresse que la coquille ouvre. Tout le reste de l'app vient du site.
         JuclairianDepart: https://juclairian.com/orla/
+        JuclairianNotifications: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -114,6 +123,10 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: Apple Distribution
           PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.vela
+    entitlements:
+      path: Plists/Vela.entitlements
+      properties:
+        aps-environment: production
     info:
       path: Plists/Vela-Info.plist
       properties:
@@ -122,6 +135,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # L'adresse que la coquille ouvre : la liste des voyages (« / » y renvoie de toute façon).
         JuclairianDepart: https://juclairian.com/voyages/
+        JuclairianNotifications: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -189,6 +203,10 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: Apple Distribution
           PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.hora
+    entitlements:
+      path: Plists/Hora.entitlements
+      properties:
+        aps-environment: production
     info:
       path: Plists/Hora-Info.plist
       properties:
@@ -197,6 +215,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # L'adresse que la coquille ouvre : les échéances. Ni photo ni position : aucune page de Hora n'en demande.
         JuclairianDepart: https://juclairian.com/echeances/
+        JuclairianNotifications: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -231,6 +250,10 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: Apple Distribution
           PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.numeria
+    entitlements:
+      path: Plists/Numeria.entitlements
+      properties:
+        aps-environment: production
     info:
       path: Plists/Numeria-Info.plist
       properties:
@@ -238,6 +261,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         JuclairianDepart: https://numeria.juclairian.com/
+        JuclairianNotifications: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -271,8 +295,6 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: Apple Distribution
           PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.electra
-    # Les notifications (« je veux juste les notifs », Bruno, 28/10/2026) : le droit de les recevoir — production,
-    # celui de TestFlight. La capacité est déclarée chez Apple par le Fastfile (CAPACITES), et son profil la porte.
     entitlements:
       path: Plists/Electra.entitlements
       properties:

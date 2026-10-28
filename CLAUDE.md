@@ -41,9 +41,12 @@ son fond, car son code n'est dans aucun dépôt.
 
 ## Les notifications (Electra, 28/10/2026)
 
-« Je veux juste les notifs » (Bruno). Une app les reçoit quand son Info.plist porte `JuclairianNotifications`
-à vrai, et son `project.yml` le droit `aps-environment: production` ; le `Fastfile` déclare la capacité chez
-Apple (`CAPACITES`) et s'assure que le profil la porte. La coquille (`Commun/Coquille/Notifications.swift`)
+« Je veux juste les notifs » (Bruno), pour Electra d'abord ; puis « la possibilité pour toutes les apps. Après
+j'utilise ou pas » : **toutes** les apps peuvent les recevoir. Une app les reçoit quand son Info.plist porte
+`JuclairianNotifications` à vrai, et son `project.yml` le droit `aps-environment: production` ; le `Fastfile`
+déclare la capacité chez Apple pour chaque app de `APPS` (`CAPACITES`) et s'assure que le profil la porte. ⚠️ Une
+app ne reçoit que ce qu'un serveur lui ENVOIE : l'app donne le jeton, le site (ou Electra) envoie — la même clé
+APNs, « Team Scoped », sert à toutes. La coquille (`Commun/Coquille/Notifications.swift`)
 demande l'autorisation, s'inscrit auprès d'Apple, et **remet le jeton à la page** — elle ne décide rien
 d'autre. Toucher une notification ouvre l'app, rien de plus (« pourquoi faire ? je veux juste les notifs »).
 
