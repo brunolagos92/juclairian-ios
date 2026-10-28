@@ -26,10 +26,14 @@ Store Connect créée à la main par Bruno** (Apps → + → Nouvelle app, nom �
 envoie les autres et dit laquelle attend. Rien dans `Commun/` ne doit nommer une app.
 
 **Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`), **Vela** (`/voyages/`, partage →
-`/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée) et **Hora** (`/echeances/`, sans
-extension : aucune page de Hora ne reçoit un lien ; ni photo ni position, donc aucune phrase de permission).
+`/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée), **Hora** (`/echeances/`, sans
+extension : aucune page de Hora ne reçoit un lien ; ni photo ni position, donc aucune phrase de permission)
+et **Numeria** (`https://numeria.juclairian.com/`, son propre site, dépôt `juclairian-app` ; sans extension ;
+son import CSV passe par le sélecteur de fichiers, sans appareil photo).
 Leur icône vient de `scripts/suivi.mjs` (`icone`, `iconeOrla`, `iconeHora`) : celle de Hora sort en RGBA
-opaque, l'alpha s'ôte sans rien changer à l'image.
+opaque, l'alpha s'ôte sans rien changer à l'image. Celle de Numeria vient de `numeria/assets/icon.svg`
+(`juclairian-app`), rendue en 1024 px par Chromium **sans son arrondi** (`rx="40"` ôté du fond) : iOS pose
+son propre masque, un arrondi dessiné laisserait ses coins.
 
 ## Consignes
 

@@ -20,6 +20,7 @@ APPS = {
   "Orla" => ["com.juclairian.orla", "com.juclairian.orla.partage"],
   "Vela" => ["com.juclairian.vela", "com.juclairian.vela.partage"],
   "Hora" => ["com.juclairian.hora"],
+  "Numeria" => ["com.juclairian.numeria"],
 }
 IDS = APPS.values.flatten
 

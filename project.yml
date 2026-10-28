@@ -209,3 +209,44 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
     scheme: {}
+
+  # ── NUMERIA ─────────────────────────────────────────────────────────────────────────────────
+  # Les comptes. Son propre site (numeria.juclairian.com, dépôt juclairian-app), la même coquille, SANS
+  # extension : rien ne se partage vers Numeria. Son import se fait par un fichier CSV (le sélecteur de
+  # fichiers d'iOS, sans appareil photo) : aucune phrase de permission. ⚠️ Fiche App Store Connect
+  # (« Numeria Juclairian ») créée À LA MAIN, une fois.
+  Numeria:
+    type: application
+    platform: iOS
+    sources:
+      - Commun/Coquille
+      - Commun/Web
+      - Apps/Numeria
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.juclairian.numeria
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.numeria
+    info:
+      path: Plists/Numeria-Info.plist
+      properties:
+        CFBundleDisplayName: Numeria
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        JuclairianDepart: https://numeria.juclairian.com/
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+    scheme: {}
