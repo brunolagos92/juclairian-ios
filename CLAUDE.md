@@ -39,6 +39,26 @@ son propre masque, un arrondi dessiné laisserait ses coins. Celle d'Electra est
 servie par Electra à `/icone.svg`, que Bruno a collée) : gardée dans `Apps/Electra/icone.svg`, sans l'arrondi de
 son fond, car son code n'est dans aucun dépôt.
 
+## Les notifications (Electra, 28/10/2026)
+
+« Je veux juste les notifs » (Bruno). Une app les reçoit quand son Info.plist porte `JuclairianNotifications`
+à vrai, et son `project.yml` le droit `aps-environment: production` ; le `Fastfile` déclare la capacité chez
+Apple (`CAPACITES`) et s'assure que le profil la porte. La coquille (`Commun/Coquille/Notifications.swift`)
+demande l'autorisation, s'inscrit auprès d'Apple, et **remet le jeton à la page** — elle ne décide rien
+d'autre. Toucher une notification ouvre l'app, rien de plus (« pourquoi faire ? je veux juste les notifs »).
+
+**Le contrat, pour le site qui envoie** (Electra : son code est sur le Mac de Bruno, hors de tout dépôt) :
+- la page trouve `window.juclairianNotifications = { jeton, sujet, environnement }` en s'ouvrant, et
+  l'évènement `juclairian:notifications` quand le jeton arrive après elle. Elle l'envoie à son serveur, qui le
+  garde (un jeton peut changer : garder le dernier) ;
+- le serveur notifie par **APNs**, en HTTP/2 : `POST https://api.push.apple.com/3/device/<jeton>` (production :
+  TestFlight y passe), en-têtes `apns-topic: <sujet>` (`com.juclairian.electra`), `apns-push-type: alert`,
+  `authorization: bearer <JWT>` — JWT ES256, `kid` = l'identifiant de la clé APNs, `iss` = l'équipe
+  `DKUFT47Y46`, `iat` = maintenant, à refaire au moins toutes les heures. Corps :
+  `{"aps":{"alert":{"title":"…","body":"…"},"sound":"default"}}`. Une réponse **410** : le jeton est mort, l'oublier ;
+- la **clé APNs** (`.p8`, créée par Bruno : developer.apple.com → Clés → Apple Push Notifications service)
+  reste sur la machine qui envoie. Jamais dans un dépôt, jamais dans une session.
+
 ## Consignes
 
 - **Pas de Mac ici** : on ne compile pas dans la session. La seule preuve qu'un changement se construit

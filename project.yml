@@ -271,6 +271,12 @@ targets:
           CODE_SIGN_STYLE: Manual
           CODE_SIGN_IDENTITY: Apple Distribution
           PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.electra
+    # Les notifications (« je veux juste les notifs », Bruno, 28/10/2026) : le droit de les recevoir — production,
+    # celui de TestFlight. La capacité est déclarée chez Apple par le Fastfile (CAPACITES), et son profil la porte.
+    entitlements:
+      path: Plists/Electra.entitlements
+      properties:
+        aps-environment: production
     info:
       path: Plists/Electra-Info.plist
       properties:
@@ -279,6 +285,8 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # L'adresse Tailscale du Mac (100.x, stable tant que le Mac reste dans le réseau privé), port d'Electra.
         JuclairianDepart: http://100.112.244.82:8321/
+        # La coquille demande l'autorisation et remet le jeton à la page (Commun/Coquille/Notifications.swift).
+        JuclairianNotifications: true
         # http, et une adresse IP : sans cette exception, la vue web refuserait la page.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true

@@ -7,6 +7,8 @@ import WebKit
 /// clé `JuclairianDepart` de l'Info.plist de chaque app.
 @main
 struct CoquilleApp: App {
+    /// Les notifications de l'app qui les demande (`Notifications.swift`) ; pour les autres, il ne fait rien.
+    @UIApplicationDelegateAdaptor(Notifications.self) private var notifications
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -45,7 +47,28 @@ final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDele
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        NotificationCenter.default.addObserver(self, selector: #selector(donnerJeton),
+                                               name: Notifications.recu, object: nil)
+        donnerJeton()
         vue.load(URLRequest(url: depart))
+    }
+
+    /// ⚠️ LE JETON DES NOTIFICATIONS, REMIS À LA PAGE (`Notifications.swift`) : `window.juclairianNotifications`
+    /// = `{ jeton, sujet, environnement }` et l'évènement `juclairian:notifications`. Posé au début de CHAQUE page
+    /// (elle le lit en s'ouvrant), et tout de suite dans celle qui est là quand il arrive (elle écoute
+    /// l'évènement). `sujet` est l'identifiant de l'app, que l'envoi à Apple nomme ; `environnement` vaut
+    /// « production » : TestFlight passe par le serveur de production d'Apple.
+    private var jetonDonne: String?
+    @objc private func donnerJeton() {
+        guard let jeton = Notifications.jeton, jeton != jetonDonne else { return }
+        jetonDonne = jeton
+        let valeur = ["jeton": jeton, "sujet": Bundle.main.bundleIdentifier ?? "", "environnement": "production"]
+        guard let json = try? JSONSerialization.data(withJSONObject: valeur),
+              let objet = String(data: json, encoding: .utf8) else { return }
+        let js = "window.juclairianNotifications = \(objet); dispatchEvent(new Event('juclairian:notifications'));"
+        vue.configuration.userContentController.addUserScript(
+            WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        vue.evaluateJavaScript(js, completionHandler: nil)
     }
 
     @objc private func recharger(_ controle: UIRefreshControl) {

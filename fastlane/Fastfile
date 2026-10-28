@@ -25,6 +25,13 @@ APPS = {
 }
 IDS = APPS.values.flatten
 
+# Les capacités qu'une app porte chez Apple, et le droit que son profil doit alors contenir. ⚠️ Déclarer une
+# capacité rend « invalides » les profils de l'identifiant : match les recrée (il les voit invalides) ; on
+# vérifie quand même, après lui, que le profil porte le droit — et on le refait sinon.
+CAPACITES = {
+  "com.juclairian.electra" => { "PUSH_NOTIFICATIONS" => "aps-environment" },
+}
+
 platform :ios do
   lane :testflight do
     setup_ci # un trousseau temporaire, propre à cette construction
@@ -46,7 +53,17 @@ platform :ios do
       Spaceship::ConnectAPI::BundleId.create(name: nom, platform: "IOS", identifier: id)
     end
 
-    match(
+    CAPACITES.each do |id, types|
+      bundle = Spaceship::ConnectAPI::BundleId.find(id)
+      presentes = bundle.get_capabilities
+      types.each_key do |type|
+        next if presentes.any? { |c| c.is_type?(type) }
+        UI.message("Capacité #{type} déclarée pour #{id}")
+        bundle.create_capability(type)
+      end
+    end
+
+    signature = {
       type: "appstore",
       app_identifier: IDS,
       team_id: ENV.fetch("APPLE_TEAM_ID"),
@@ -61,7 +78,20 @@ platform :ios do
       # setup_ci met match en lecture seule ; ici il doit pouvoir créer ce qui manque la première
       # fois. Ensuite il reprend l'existant.
       readonly: false
-    )
+    }
+    match(**signature)
+
+    # Un profil fait AVANT la capacité ne porte pas son droit : on le refait, une fois. ⚠️ Pas par `force` : il
+    # recréerait le profil sous un AUTRE nom (le sien est pris), et project.yml l'attend sous le sien. On le
+    # supprime chez Apple ; match, ne le trouvant plus, le refait sous le même nom.
+    CAPACITES.each do |id, types|
+      chemin = ENV[Match::Utils.environment_variable_name_profile_path(app_identifier: id, type: "appstore")]
+      droits = FastlaneCore::ProvisioningProfile.parse(chemin)["Entitlements"] || {}
+      next if types.values.all? { |droit| droits.key?(droit) }
+      UI.important("Le profil de #{id} ne porte pas #{types.values.join(', ')} : on le refait")
+      Spaceship::ConnectAPI::Profile.all(filter: { name: "match AppStore #{id}" }).each(&:delete!)
+      match(**signature.merge(app_identifier: [id]))
+    end
 
     # ⚠️ CHAQUE APP POUR ELLE-MÊME : une fiche App Store Connect qui manque (une app neuve) n'empêche pas les
     # autres de partir. On construit tout, on envoie ce qui a sa fiche, et l'on DIT à la fin ce qui attend.
