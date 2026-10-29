@@ -52,8 +52,9 @@ d'autre. Toucher une notification ouvre l'app, rien de plus (« pourquoi faire ?
 
 **Le contrat, pour le site qui envoie** (Electra : son code est sur le Mac de Bruno, hors de tout dépôt) :
 - la page trouve `window.juclairianNotifications = { jeton, sujet, environnement }` en s'ouvrant, et
-  l'évènement `juclairian:notifications` quand le jeton arrive après elle. Elle l'envoie à son serveur, qui le
-  garde (un jeton peut changer : garder le dernier) ;
+  l'évènement `juclairian:notifications` quand le jeton arrive après elle. Elle l'envoie à son serveur, qui
+  garde **un jeton par iPhone** — une liste sans doublon, pas « le dernier » : le jeton de Valérie aurait
+  remplacé celui de Bruno (29/10/2026) — et envoie à chacun ;
 - le serveur notifie par **APNs**, en HTTP/2 : `POST https://api.push.apple.com/3/device/<jeton>` (production :
   TestFlight y passe), en-têtes `apns-topic: <sujet>` (`com.juclairian.electra`), `apns-push-type: alert`,
   `authorization: bearer <JWT>` — JWT ES256, `kid` = l'identifiant de la clé APNs, `iss` = l'équipe
