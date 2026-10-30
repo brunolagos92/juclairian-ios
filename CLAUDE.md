@@ -51,7 +51,11 @@ porte trois, petits et carrés, **sans aucune donnée** : un tap ouvre l'app sur
 jamais un autre domaine (`CoquilleController.ouvrir`) — y compris quand le widget lance l'app. Chaque tap est une
 demande neuve : il ramène à l'onglet même si l'on a navigué depuis. Un onglet de plus = une ligne `Onglet` et
 un type `Widget` de plus dans le fichier ; son `genre` ne change jamais (un widget posé le garde). ⚠️ Depuis
-iOS 17, un widget sans `containerBackground` n'affiche qu'une erreur : le fond passe par `fond(_:)`.
+iOS 17, un widget sans `containerBackground` n'affiche qu'une erreur : le fond passe par `fond(_:)`. ⚠️⚠️ **Le nom et la
+description d'un widget sont des chaînes toutes faites**, jamais un littéral à trou (`"… \(x)"`) : WidgetKit le
+reçoit comme un texte formaté et **plante** (« Formatted text for `description` is not supported ») quand iOS
+lui demande ses widgets — et l'app **manque à la galerie**, sans autre signe (build 25 : l'iPhone redémarré n'y
+a rien fait ; la cause n'a été lue que par `diagnostic.yml`, dans le journal du simulateur).
 
 ## Les notifications (Electra, 28/10/2026)
 

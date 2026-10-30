@@ -37,9 +37,13 @@ struct RecettesWidget: Widget { var body: some WidgetConfiguration { configurati
 struct SeriesWidget: Widget { var body: some WidgetConfiguration { configuration(.series) } }
 
 private func configuration(_ onglet: Onglet) -> some WidgetConfiguration {
-    StaticConfiguration(kind: onglet.genre, provider: Fixe()) { _ in Carre(onglet: onglet) }
+    // ⚠️ Une chaîne TOUTE FAITE, jamais un littéral à trou : `"… \(x)"` devient un texte formaté, que WidgetKit
+    // refuse (« Formatted text for `description` is not supported ») — l'extension plantait quand iOS lui
+    // demandait ses widgets, et Orla manquait à la galerie (build 25, lu par `diagnostic.yml`, 30/10/2026).
+    let phrase = "Ouvre Orla sur les " + onglet.nom.lowercased() + "."
+    return StaticConfiguration(kind: onglet.genre, provider: Fixe()) { _ in Carre(onglet: onglet) }
         .configurationDisplayName(onglet.nom)
-        .description("Ouvre Orla sur les \(onglet.nom.lowercased()).")
+        .description(Text(verbatim: phrase))
         .supportedFamilies([.systemSmall])
 }
 
