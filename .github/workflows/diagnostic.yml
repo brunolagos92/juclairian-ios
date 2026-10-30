@@ -1,0 +1,64 @@
+# DIAGNOSTIC : une extension présente dans l'app mais qu'iOS ne montre pas (30/10/2026 — « je n'ai pas Orla dans
+# la liste des widgets », build 25, iPhone redémarré). On ne suppose pas : on construit Orla comme pour
+# TestFlight (Release), on lit ce qu'il y a dans son paquet, puis on l'installe dans un simulateur et l'on demande
+# à iOS ce qu'il en voit — l'extension est-elle inscrite (pluginkit), lancée, plantée (le journal, les rapports).
+# À la main seulement (Actions → Diagnostic → Run workflow) : il ne signe rien, n'envoie rien à TestFlight.
+name: Diagnostic
+
+on:
+  workflow_dispatch:
+
+jobs:
+  widgets:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Générer le projet Xcode
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Construire Orla (Release, simulateur) et lire son paquet
+        run: |
+          set -o pipefail
+          xcodebuild -project Juclairian.xcodeproj -scheme Orla -configuration Release \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 5
+          APP=$(find "$RUNNER_TEMP/dd/Build/Products" -maxdepth 2 -name Orla.app | head -1)
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          EXT="$APP/PlugIns/OrlaWidgets.appex"
+          echo "── Les extensions dans Orla.app :"; ls "$APP/PlugIns"
+          echo "── Info.plist de l'extension :"; plutil -p "$EXT/Info.plist"
+          echo "── Point d'entrée (LC_MAIN) et symboles main :"
+          otool -l "$EXT/OrlaWidgets" | grep -A3 LC_MAIN || echo "pas de LC_MAIN"
+          nm -m "$EXT/OrlaWidgets" | grep -iE "_main$|NSExtensionMain" || true
+          echo "── Bibliothèques liées :"; otool -L "$EXT/OrlaWidgets"
+
+      - name: L'installer dans un simulateur et lire ce qu'iOS en voit
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          for rt, devs in sorted(json.load(sys.stdin)["devices"].items(), reverse=True):
+              if "iOS" in rt:
+                  for d in devs:
+                      if d["name"].startswith("iPhone"):
+                          print(d["udid"]); sys.exit()
+          ')
+          echo "── Simulateur $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b > /dev/null
+          xcrun simctl install "$UDID" "$APP"
+          sleep 20
+          echo "── Extensions de widgets inscrites (pluginkit) :"
+          xcrun simctl spawn "$UDID" pluginkit -mAvvv -p com.apple.widgetkit-extension 2>&1 | head -80 || true
+          xcrun simctl launch "$UDID" com.juclairian.orla || true
+          sleep 20
+          echo "── Le journal (chronod, l'extension, ce qui nomme Orla) :"
+          xcrun simctl spawn "$UDID" log show --last 5m --style compact --predicate \
+            'process == "OrlaWidgets" OR eventMessage CONTAINS[c] "orla.widgets" OR (process == "chronod" AND eventMessage CONTAINS[c] "orla")' \
+            2>&1 | tail -n 200 || true
+          echo "── Rapports de plantage :"
+          ls -1 "$HOME/Library/Logs/DiagnosticReports" 2>/dev/null | grep -i orla || echo "aucun"
+          for f in "$HOME"/Library/Logs/DiagnosticReports/*rla*; do [ -f "$f" ] && head -n 60 "$f"; done || true

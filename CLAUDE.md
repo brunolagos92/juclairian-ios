@@ -17,6 +17,7 @@ sur le site est dans l'app aussitôt ; ce dépôt ne change que quand l'envelopp
 | `Apps/OrlaWidgets` | Les **widgets** d'Orla (ci-dessous). |
 | `Apps/<App>` | Ce qui est propre à une app : son icône (1024 px, **sans canal alpha** — App Store refuse). Ses réglages (adresses, permissions) sont dans `project.yml` ; les `Info.plist` en sont générés dans `Plists/`, jamais commités. |
 | `.github/workflows/construire.yml` | Compile à chaque push ; signe et envoie dans TestFlight si la clé d'API est posée. |
+| `.github/workflows/diagnostic.yml` | À la main seulement : construit Orla (Release, simulateur), lit le paquet de son extension de widgets, l'installe dans un simulateur et rend ce qu'iOS en voit (inscription, journal, plantages). Ne signe ni n'envoie rien. |
 | `fastlane/Fastfile` | La signature et l'envoi. `match` crée une fois le certificat de distribution et les profils App Store, et les garde **chiffrés dans la branche `signature`** — jamais à la main, jamais fusionnée dans `main`. |
 
 **Une app de plus** = une cible et son extension dans `project.yml`, un dossier `Apps/<App>` avec son
