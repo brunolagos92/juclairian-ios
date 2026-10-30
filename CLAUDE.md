@@ -14,6 +14,7 @@ sur le site est dans l'app aussitôt ; ce dépôt ne change que quand l'envelopp
 | `Commun/Coquille` | L'app : une vue web sur `JuclairianDepart` (Info.plist), liens externes dehors, dialogues du site. |
 | `Commun/Partage` | L'extension de partage : ouvre `JuclairianPartage` (Info.plist), `{url}` = le lien partagé. Elle pose le canal **`juclairianPartage`** : le site y voit qu'il est dans la feuille (il retire son menu) et y envoie `{ fini: true, texte }` quand tout est écrit — la fenêtre le montre, puis se ferme ; ou `{ titre: true }` pour DEMANDER le titre de la page partagée, que la fenêtre lit depuis le téléphone (Amazon refuse sa page aux serveurs, pas à un iPhone) et rend dans `window.juclairianTitrePartage`. `{texte}` dans l'adresse reçoit le texte joint au lien, sans ses adresses. Contrat avec le site : `nav.html` (`partageFini`) et `orla-lectures.html` (`titreParLApp`) dans `juclairian`. |
 | `Commun/Web` | Ce que les deux partagent. ⚠️ Rien qui appelle `UIApplication.shared` : interdit dans une extension. |
+| `Apps/OrlaWidgets` | Les **widgets** d'Orla (ci-dessous). |
 | `Apps/<App>` | Ce qui est propre à une app : son icône (1024 px, **sans canal alpha** — App Store refuse). Ses réglages (adresses, permissions) sont dans `project.yml` ; les `Info.plist` en sont générés dans `Plists/`, jamais commités. |
 | `.github/workflows/construire.yml` | Compile à chaque push ; signe et envoie dans TestFlight si la clé d'API est posée. |
 | `fastlane/Fastfile` | La signature et l'envoi. `match` crée une fois le certificat de distribution et les profils App Store, et les garde **chiffrés dans la branche `signature`** — jamais à la main, jamais fusionnée dans `main`. |
@@ -25,7 +26,7 @@ Store Connect créée à la main par Bruno** (Apps → + → Nouvelle app, nom �
 `com.juclairian.<app>`), une fois que la construction a déclaré l'identifiant. D'ici là, la construction
 envoie les autres et dit laquelle attend. Rien dans `Commun/` ne doit nommer une app.
 
-**Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`), **Vela** (`/voyages/`, partage →
+**Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`, et ses widgets), **Vela** (`/voyages/`, partage →
 `/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée), **Hora** (`/echeances/`, sans
 extension : aucune page de Hora ne reçoit un lien ; ni photo ni position, donc aucune phrase de permission)
 et **Numeria** (`https://numeria.juclairian.com/`, son propre site, dépôt `juclairian-app` ; sans extension ;
@@ -38,6 +39,18 @@ opaque, l'alpha s'ôte sans rien changer à l'image. Celle de Numeria vient de `
 son propre masque, un arrondi dessiné laisserait ses coins. Celle d'Electra est la sienne (la maison et l'éclair,
 servie par Electra à `/icone.svg`, que Bruno a collée) : gardée dans `Apps/Electra/icone.svg`, sans l'arrondi de
 son fond, car son code n'est dans aucun dépôt.
+
+## Les widgets d'Orla (30/10/2026)
+
+« Un petit widget par onglet », « pas les 7 : Repas, Recettes, Séries », « seulement l'icône et le nom »
+(Bruno). L'extension **`OrlaWidgets`** (`Apps/OrlaWidgets/Widgets.swift`, `com.juclairian.orla.widgets`) en
+porte trois, petits et carrés, **sans aucune donnée** : un tap ouvre l'app sur
+`juclairian-orla://juclairian.com/orla/<onglet>/` (`JuclairianOrla` + le chemin). Orla déclare ce schéma
+(`CFBundleURLTypes`) ; la coquille reçoit l'adresse (`onOpenURL`) et charge **la page du site au même chemin**,
+jamais un autre domaine (`CoquilleController.ouvrir`) — y compris quand le widget lance l'app. Chaque tap est une
+demande neuve : il ramène à l'onglet même si l'on a navigué depuis. Un onglet de plus = une ligne `Onglet` et
+un type `Widget` de plus dans le fichier ; son `genre` ne change jamais (un widget posé le garde). ⚠️ Depuis
+iOS 17, un widget sans `containerBackground` n'affiche qu'une erreur : le fond passe par `fond(_:)`.
 
 ## Les notifications (Electra, 28/10/2026)
 

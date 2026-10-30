@@ -53,6 +53,12 @@ targets:
         # L'adresse que la coquille ouvre. Tout le reste de l'app vient du site.
         JuclairianDepart: https://juclairian.com/orla/
         JuclairianNotifications: true
+        # Le schéma que touchent ses widgets (OrlaWidgets) : juclairian-orla://juclairian.com/orla/repas/ ouvre
+        # l'app sur https://juclairian.com/orla/repas/ (`Coquille.swift`, `ouvrir`).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.juclairian.orla
+            CFBundleURLSchemes:
+              - juclairian-orla
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -70,6 +76,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
     dependencies:
       - target: OrlaPartage
+      - target: OrlaWidgets
     scheme: {}
 
   OrlaPartage:
@@ -102,6 +109,32 @@ targets:
             NSExtensionActivationRule:
               NSExtensionActivationSupportsWebURLWithMaxCount: 1
               NSExtensionActivationSupportsText: true
+
+  # Les widgets de l'écran d'accueil : un petit carré par onglet — Repas, Recettes, Séries (« pas les 7 »,
+  # Bruno, 30/10/2026) —, l'icône et le nom, sans donnée. Un tap ouvre Orla sur l'onglet.
+  OrlaWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Apps/OrlaWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.juclairian.orla.widgets
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.orla.widgets
+    info:
+      path: Plists/OrlaWidgets-Info.plist
+      properties:
+        CFBundleDisplayName: Orla
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Le début de l'adresse d'un widget ; il y ajoute le chemin de son onglet (« repas/ »).
+        JuclairianOrla: juclairian-orla://juclairian.com/orla/
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   # ── VELA ────────────────────────────────────────────────────────────────────────────────────
   # Les voyages. La même coquille et la même extension qu'Orla : seuls l'icône, les adresses et les

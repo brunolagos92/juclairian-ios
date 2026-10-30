@@ -17,7 +17,7 @@ default_platform(:ios)
 # Chaque app : son schéma, son identifiant, celui de son extension s'il y en a une. Une app de plus = une ligne
 # ici, ses cibles dans project.yml, et sa fiche App Store Connect créée à la main (CLAUDE.md).
 APPS = {
-  "Orla" => ["com.juclairian.orla", "com.juclairian.orla.partage"],
+  "Orla" => ["com.juclairian.orla", "com.juclairian.orla.partage", "com.juclairian.orla.widgets"],
   "Vela" => ["com.juclairian.vela", "com.juclairian.vela.partage"],
   "Hora" => ["com.juclairian.hora"],
   "Numeria" => ["com.juclairian.numeria"],

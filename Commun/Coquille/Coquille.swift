@@ -9,21 +9,34 @@ import WebKit
 struct CoquilleApp: App {
     /// Les notifications de l'app qui les demande (`Notifications.swift`) ; pour les autres, il ne fait rien.
     @UIApplicationDelegateAdaptor(Notifications.self) private var notifications
+    /// La page demandée de l'extérieur — un widget touché (`Apps/<App>Widgets`) : l'app s'ouvre dessus.
+    @State private var demande: Demande?
     var body: some Scene {
         WindowGroup {
             ZStack {
                 Color(uiColor: Site.fond).ignoresSafeArea()
-                Coquille()
+                Coquille(demande: demande)
             }
+            .onOpenURL { demande = Demande(url: $0) }
         }
     }
 }
 
+/// Une adresse reçue par l'app. Chaque demande est neuve (son `id`) : toucher deux fois le même widget ramène
+/// deux fois à sa page, même si l'on a navigué entre-temps.
+struct Demande: Equatable {
+    let url: URL
+    let id = UUID()
+}
+
 struct Coquille: UIViewControllerRepresentable {
+    let demande: Demande?
     func makeUIViewController(context: Context) -> CoquilleController {
         CoquilleController(depart: URL(string: Site.reglage("JuclairianDepart"))!)
     }
-    func updateUIViewController(_ controleur: CoquilleController, context: Context) {}
+    func updateUIViewController(_ controleur: CoquilleController, context: Context) {
+        if let demande = demande { controleur.ouvrir(demande) }
+    }
 }
 
 final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDelegate {
@@ -50,7 +63,21 @@ final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDele
         NotificationCenter.default.addObserver(self, selector: #selector(donnerJeton),
                                                name: Notifications.recu, object: nil)
         donnerJeton()
-        vue.load(URLRequest(url: depart))
+        vue.load(URLRequest(url: enAttente ?? depart))
+    }
+
+    /// ⚠️ UNE ADRESSE REÇUE (un widget) : `<schéma de l'app>://<domaine du site>/<chemin>` — le schéma que
+    /// déclare l'Info.plist (`CFBundleURLTypes`) — est la page du site au même chemin. Une adresse d'un autre
+    /// domaine ne s'ouvre pas. L'app lancée par le widget n'a pas encore sa vue : la page attend `viewDidLoad`.
+    private var servie: UUID?
+    private var enAttente: URL?
+    func ouvrir(_ demande: Demande) {
+        guard demande.id != servie else { return }
+        servie = demande.id
+        var morceaux = URLComponents(url: demande.url, resolvingAgainstBaseURL: false)
+        morceaux?.scheme = depart.scheme
+        guard let page = morceaux?.url, estDuSite(page) else { return }
+        if isViewLoaded { vue.load(URLRequest(url: page)) } else { enAttente = page }
     }
 
     /// ⚠️ LE JETON DES NOTIFICATIONS, REMIS À LA PAGE (`Notifications.swift`) : `window.juclairianNotifications`
