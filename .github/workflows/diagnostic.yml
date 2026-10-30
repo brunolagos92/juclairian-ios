@@ -54,7 +54,14 @@ jobs:
           echo "── Extensions de widgets inscrites (pluginkit) :"
           xcrun simctl spawn "$UDID" pluginkit -mAvvv -p com.apple.widgetkit-extension 2>&1 | head -80 || true
           xcrun simctl launch "$UDID" com.juclairian.orla || true
-          sleep 20
+          # ⚠️ Au sortir du démarrage, iOS redemande les widgets de TOUTES ses apps : la question à l'extension peut
+          # attendre plusieurs minutes (deuxième essai, 30/10/2026 : posée, jamais servie avant la fin). On attend
+          # qu'elle soit posée ET servie — ou que l'extension plante —, six minutes au plus.
+          for i in $(seq 1 18); do
+            sleep 20
+            if xcrun simctl spawn "$UDID" log show --last 10m --style compact --predicate 'process == "OrlaWidgets"' 2>/dev/null \
+                 | grep -qE "getAllCurrentDescriptors|Fatal error"; then sleep 10; break; fi
+          done
           echo "── Le journal (chronod, l'extension, ce qui nomme Orla) :"
           xcrun simctl spawn "$UDID" log show --last 5m --style compact --predicate \
             'process == "OrlaWidgets" OR eventMessage CONTAINS[c] "orla.widgets" OR (process == "chronod" AND eventMessage CONTAINS[c] "orla")' \
