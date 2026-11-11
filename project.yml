@@ -295,6 +295,12 @@ targets:
         # L'adresse que la coquille ouvre : les albums.
         JuclairianDepart: https://juclairian.com/photos/
         JuclairianNotifications: true
+        # Le schéma que touche son widget (ImagoWidgets) : juclairian-imago://juclairian.com/photos/?lancer=tele ouvre
+        # l'app sur https://juclairian.com/photos/?lancer=tele (`Coquille.swift`, `ouvrir`), et la page lance la télé.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.juclairian.imago
+            CFBundleURLSchemes:
+              - juclairian-imago
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -316,7 +322,35 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
+    dependencies:
+      - target: ImagoWidgets
     scheme: {}
+
+  # Le widget de l'écran d'accueil : un petit carré « Sur la télé » — un tap ouvre Imago et lance les photos sur la
+  # télé (« 1 et 2 », Bruno, 11/11/2026). Sans donnée, comme ceux d'Orla.
+  ImagoWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Apps/ImagoWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.juclairian.imago.widgets
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.imago.widgets
+    info:
+      path: Plists/ImagoWidgets-Info.plist
+      properties:
+        CFBundleDisplayName: Imago
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Le début de l'adresse du widget ; il y ajoute « ?lancer=tele ».
+        JuclairianImago: juclairian-imago://juclairian.com/photos/
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   # ── NUMERIA ─────────────────────────────────────────────────────────────────────────────────
   # Les comptes. Son propre site (numeria.juclairian.com, dépôt juclairian-app), la même coquille, SANS

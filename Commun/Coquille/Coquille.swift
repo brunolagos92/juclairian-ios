@@ -84,7 +84,7 @@ final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDele
         var morceaux = URLComponents(url: demande.url, resolvingAgainstBaseURL: false)
         morceaux?.scheme = depart.scheme
         guard let page = morceaux?.url, estDuSite(page) else { return }
-        if isViewLoaded { vue.load(URLRequest(url: page)) } else { enAttente = page }
+        if isViewLoaded { vue.load(URLRequest(url: page, cachePolicy: .reloadIgnoringLocalCacheData)) } else { enAttente = page }
     }
 
     /// ⚠️ LE JETON DES NOTIFICATIONS, REMIS À LA PAGE (`Notifications.swift`) : `window.juclairianNotifications`

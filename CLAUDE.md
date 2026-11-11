@@ -59,6 +59,15 @@ reçoit comme un texte formaté et **plante** (« Formatted text for `descriptio
 lui demande ses widgets — et l'app **manque à la galerie**, sans autre signe (build 25 : l'iPhone redémarré n'y
 a rien fait ; la cause n'a été lue que par `diagnostic.yml`, dans le journal du simulateur).
 
+## Le widget d'Imago (11/11/2026)
+
+« On n'a pas plus simple que ouvrir l'app, cliquer sur télé, lancer sur la télé ? » (Bruno). L'extension
+**`ImagoWidgets`** (`Apps/ImagoWidgets/Widgets.swift`, `com.juclairian.imago.widgets`) porte un petit carré
+« Sur la télé », sur le modèle exact de ceux d'Orla : sans donnée, un tap ouvre l'app sur
+`juclairian-imago://juclairian.com/photos/?lancer=tele` (`JuclairianImago` + `?lancer=tele`) ; la coquille charge
+la page du site au même chemin, et c'est **la page** qui lance la télé en arrivant (`juclairian`, `src/photos.html`,
+`lancerTele`). Les mêmes pièges que pour Orla : chaînes toutes faites, `containerBackground`.
+
 ## Lancer une app sur la télé (Imago, 11/11/2026)
 
 « Aucun moyen de lancer l'app de la TV depuis l'iPhone ? » (Bruno). Une page web ne peut pas parler à la télé

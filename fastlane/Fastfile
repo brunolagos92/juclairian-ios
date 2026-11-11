@@ -20,7 +20,7 @@ APPS = {
   "Orla" => ["com.juclairian.orla", "com.juclairian.orla.partage", "com.juclairian.orla.widgets"],
   "Vela" => ["com.juclairian.vela", "com.juclairian.vela.partage"],
   "Hora" => ["com.juclairian.hora"],
-  "Imago" => ["com.juclairian.imago"],
+  "Imago" => ["com.juclairian.imago", "com.juclairian.imago.widgets"],
   "Numeria" => ["com.juclairian.numeria"],
   "Electra" => ["com.juclairian.electra"],
 }
