@@ -80,6 +80,10 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         entendu = false
         let reglage = URLSessionConfiguration.ephemeral
         reglage.timeoutIntervalForRequest = 8
+        // ⚠️ LA QUESTION D'iOS (« … souhaite rechercher des appareils sur votre réseau local ») ne se pose qu'à la
+        // première connexion, et tant qu'on n'y a pas répondu iOS dit « pas d'Internet » (-1009) : sans attendre,
+        // le premier essai échouait pendant que la question était à l'écran (capture de Bruno, 11/11/2026).
+        reglage.waitsForConnectivity = true
         let session = URLSession(configuration: reglage, delegate: self, delegateQueue: .main)
         let tache = session.webSocketTask(with: url)
         self.session = session
@@ -91,7 +95,8 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         let garde = DispatchWorkItem { [weak self] in
             guard let self = self, self.tache === tache else { return }
             self.fermer()
-            self.dire("erreur", "La télé n'a pas répondu.")
+            self.dire("erreur", "La télé n'a pas répondu. Si iOS n'a rien demandé : Réglages de l'iPhone → "
+                + "Confidentialité et sécurité → Réseau local, et y autoriser cette app.")
         }
         self.garde = garde
         DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: garde)
@@ -152,8 +157,8 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
             chiffre = false
             return ouvrir()
         }
-        dire("erreur", "La télé ne répond pas (" + raison + "). Est-elle allumée, sur le même Wi-Fi, "
-            + "et l'accès au réseau local est-il autorisé pour cette app dans les Réglages de l'iPhone ?")
+        dire("erreur", "La télé ne répond pas (" + raison + "). Est-elle allumée, et sur le même Wi-Fi ? "
+            + "Sinon : Réglages de l'iPhone → Confidentialité et sécurité → Réseau local, y autoriser cette app.")
     }
 
     private func lire(_ texte: String, de tache: URLSessionWebSocketTask) {
