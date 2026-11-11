@@ -66,7 +66,11 @@ final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDele
         NotificationCenter.default.addObserver(self, selector: #selector(donnerJeton),
                                                name: Notifications.recu, object: nil)
         donnerJeton()
-        vue.load(URLRequest(url: enAttente ?? depart))
+        // ⚠️ LA PAGE D'OUVERTURE NE VIENT JAMAIS DU CACHE (11/11/2026) : une app d'une seule page (Imago) a montré
+        // pendant des heures la page de sa première ouverture — elle n'a redemandé son adresse au site qu'une fois
+        // (journaux Netlify), à travers deux livraisons et une mise à jour de l'app. Un push sur le site doit être
+        // dans l'app à l'ouverture suivante, quoi que le site ait dit de son cache.
+        vue.load(URLRequest(url: enAttente ?? depart, cachePolicy: .reloadIgnoringLocalCacheData))
     }
 
     /// ⚠️ UNE ADRESSE REÇUE (un widget) : `<schéma de l'app>://<domaine du site>/<chemin>` — le schéma que
@@ -102,7 +106,7 @@ final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDele
     }
 
     @objc private func recharger(_ controle: UIRefreshControl) {
-        vue.reload()
+        vue.reloadFromOrigin()   // tirer pour rafraîchir redemande la page AU SITE, jamais au cache
         controle.endRefreshing()
     }
 

@@ -98,6 +98,11 @@ d'autre. Toucher une notification ouvre l'app, rien de plus (« pourquoi faire ?
 
 ## Consignes
 
+- ⚠️ **La page d'ouverture ne vient jamais du cache** (`Coquille.swift`, 11/11/2026 : Imago, une seule page,
+  montrait celle de sa première ouverture trois livraisons plus tard) : `.reloadIgnoringLocalCacheData` au
+  lancement, `reloadFromOrigin()` au geste de rafraîchissement. Quand Bruno dit que l'app n'a pas la livraison,
+  on lit **les journaux de Netlify** (ce que l'app demande vraiment) avant toute hypothèse.
+
 - **Pas de Mac ici** : on ne compile pas dans la session. La seule preuve qu'un changement se construit
   est le passage de `construire.yml` sur GitHub — on ne dit pas « ça marche » avant de l'avoir lu.
 - **Ici, on pousse SANS demander** : « oui, pousse sans me demander sur juclairian-ios » (Bruno,
