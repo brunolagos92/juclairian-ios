@@ -77,8 +77,11 @@ la page du site au même chemin, et c'est **la page** qui lance la télé en arr
 rien : **le contrat** est en tête de `Tele.swift` — la page envoie `{ action: "lancer", adresse, app }` sur le
 canal `juclairianTele` et reçoit l'évènement `juclairian:tele` (`connexion`, `accord`, `lancee`, `erreur`). Elle
 ne se connecte qu'à une adresse IPv4 **privée**, à la demande d'une page du site. La télé demande son accord une
-fois, à l'écran ; sa clé est gardée dans l'app. ⚠️ **La télé doit être allumée** : la réveiller par le réseau
-demande une diffusion, qu'iOS réserve à un droit accordé par Apple (`com.apple.developer.networking.multicast`).
+fois, à l'écran ; sa clé est gardée dans l'app. ⚠️ **En veille, la télé ne répond pas** (« télé en veille, cela ne
+fonctionne pas », Bruno) : la coquille essaie plusieurs fois pendant 40 s et tente de la **réveiller** par un paquet
+« Wake-on-LAN » adressé à elle seule, avec l'adresse matérielle apprise lors d'un lancement allumée (réglage de la
+télé « Activer via Wi-Fi »). La forme diffusée à tout le réseau demande un droit accordé par Apple
+(`com.apple.developer.networking.multicast`) : non demandé à ce jour.
 ⚠️ Écrit sans télé ni Mac : le protocole est recopié d'aiowebostv 1.0.2, la mise au point se fait avec Bruno.
 
 ## Les notifications (Electra, 28/10/2026)

@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import WebKit
 
 /// LANCER UNE APP SUR LA TÉLÉ (LG webOS), pour l'app qui le demande : `JuclairianTele` à vrai dans son Info.plist
@@ -16,8 +17,9 @@ import WebKit
 /// **Le protocole de la télé** (lu dans aiowebostv 1.0.2, la bibliothèque de Home Assistant) : on s'inscrit par un
 /// message `register` ; la première fois la télé affiche une question, puis rend une clé (`client-key`) qu'on
 /// garde pour ne plus rien redemander ; ensuite `ssap://system.launcher/launch` avec l'identifiant de l'app.
-/// ⚠️ La télé doit être ALLUMÉE et sur le même réseau : la réveiller demanderait une diffusion sur le réseau,
-/// qu'iOS ne permet qu'avec un droit accordé par Apple au cas par cas.
+/// ⚠️ EN VEILLE, la télé ne répond pas : on tente de la RÉVEILLER (`reveiller`, un paquet « Wake-on-LAN » adressé
+/// à elle seule), avec l'adresse matérielle qu'elle a donnée lors d'un lancement allumée (`reseau_0`). La forme
+/// habituelle du paquet — diffusée à tout le réseau — demande sur iOS un droit qu'Apple accorde au cas par cas.
 final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
     static let canal = "juclairianTele"
     static var active: Bool {
@@ -30,7 +32,6 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
     private var tache: URLSessionWebSocketTask?
     private var hote = ""
     private var app = ""
-    private var chiffre = true
     private var entendu = false
     private var garde: DispatchWorkItem?
 
@@ -69,20 +70,28 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         fermer()
         hote = adresse
         self.app = app
-        chiffre = true
+        debut = Date()
+        reveils = 0
+        lancee = false
         dire("connexion", "Connexion à la télé…")
         ouvrir()
     }
 
-    /// `wss://…:3001` d'abord ; si rien ne répond, `ws://…:3000` (les télés d'avant 2020).
+    /// ⚠️ UN ESSAI DE CONNEXION, et l'on en fait plusieurs (11/11/2026 : « télé en veille, cela ne fonctionne
+    /// pas », Bruno). En veille, la télé ne répond pas ; et tant qu'on n'a pas répondu à la question d'iOS sur le
+    /// réseau local, iOS fait comme s'il n'y avait pas de réseau. Dans les deux cas l'essai reste muet : au bout
+    /// de `patience` secondes sans un mot de la télé on l'abandonne, on la RÉVEILLE si l'on sait comment, et l'on
+    /// recommence — pendant `duree` secondes en tout. Seulement `wss://…:3001` : c'est la porte des télés de 2020
+    /// et après.
+    private let patience: TimeInterval = 5
+    private let duree: TimeInterval = 40
+    private var debut = Date()
+    private var reveils = 0
+
     private func ouvrir() {
-        guard let url = URL(string: (chiffre ? "wss://" : "ws://") + hote + (chiffre ? ":3001" : ":3000")) else { return }
+        guard let url = URL(string: "wss://" + hote + ":3001") else { return }
         entendu = false
         let reglage = URLSessionConfiguration.ephemeral
-        reglage.timeoutIntervalForRequest = 8
-        // ⚠️ LA QUESTION D'iOS (« … souhaite rechercher des appareils sur votre réseau local ») ne se pose qu'à la
-        // première connexion, et tant qu'on n'y a pas répondu iOS dit « pas d'Internet » (-1009) : sans attendre,
-        // le premier essai échouait pendant que la question était à l'écran (capture de Bruno, 11/11/2026).
         reglage.waitsForConnectivity = true
         let session = URLSession(configuration: reglage, delegate: self, delegateQueue: .main)
         let tache = session.webSocketTask(with: url)
@@ -91,15 +100,18 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         tache.resume()
         envoyer(inscription(), sur: tache)
         ecouter(tache)
-        // La question posée sur la télé attend qu'on y réponde à la télécommande : on laisse une minute.
-        let garde = DispatchWorkItem { [weak self] in
-            guard let self = self, self.tache === tache else { return }
-            self.fermer()
-            self.dire("erreur", "La télé n'a pas répondu. Si iOS n'a rien demandé : Réglages de l'iPhone → "
-                + "Confidentialité et sécurité → Réseau local, et y autoriser cette app.")
+        armer(patience) { [weak self] in
+            guard let self = self, self.tache === tache, !self.entendu else { return }
+            self.muet("elle ne répond pas")
         }
+    }
+
+    /// Une seule échéance à la fois : la poser annule la précédente.
+    private func armer(_ secondes: TimeInterval, _ suite: @escaping () -> Void) {
+        garde?.cancel()
+        let garde = DispatchWorkItem(block: suite)
         self.garde = garde
-        DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: garde)
+        DispatchQueue.main.asyncAfter(deadline: .now() + secondes, execute: garde)
     }
 
     private func fermer() {
@@ -112,6 +124,56 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
     }
 
     private var cleGardee: String { "juclairianTeleCle-" + hote }
+    private var macsGardees: String { "juclairianTeleMac-" + hote }
+
+    /// La télé n'a rien dit : on la réveille si l'on connaît son adresse matérielle, et l'on recommence.
+    private func muet(_ raison: String) {
+        fermer()
+        let macs = UserDefaults.standard.stringArray(forKey: macsGardees) ?? []
+        if Date().timeIntervalSince(debut) > duree {
+            var texte = "La télé ne s'est pas réveillée (" + raison + "). L'allumer à la télécommande, puis relancer."
+            if macs.isEmpty {
+                texte = "La télé ne répond pas (" + raison + "). Si elle est en veille : la lancer une fois allumée, "
+                texte += "pour que l'app apprenne à la réveiller. Sinon : Réglages de l'iPhone → Confidentialité et "
+                texte += "sécurité → Réseau local, y autoriser cette app."
+            }
+            return dire("erreur", texte)
+        }
+        if !macs.isEmpty {
+            reveiller(macs)
+            reveils += 1
+            if reveils == 1 { dire("connexion", "La télé est en veille : réveil en cours…") }
+        }
+        armer(2) { [weak self] in self?.ouvrir() }
+    }
+
+    /// ⚠️ LE PAQUET DE RÉVEIL (« Wake-on-LAN ») : six octets FF puis seize fois l'adresse matérielle, en UDP. On
+    /// l'adresse à la télé SEULE (et à l'adresse de diffusion de son réseau, au cas où) : la diffusion à tout le
+    /// réseau, sa forme habituelle, demande sur iOS un droit qu'Apple accorde au cas par cas — sans lui cet envoi-là
+    /// est simplement ignoré. Il faut que la télé ait « Activer via Wi-Fi » allumé, et qu'elle réponde encore en veille.
+    private func reveiller(_ macs: [String]) {
+        var cibles = [hote]
+        var morceaux = hote.split(separator: ".").map(String.init)
+        if morceaux.count == 4 {
+            morceaux[3] = "255"
+            cibles.append(morceaux.joined(separator: "."))
+        }
+        for mac in macs {
+            let octets = mac.split(separator: ":").compactMap { UInt8($0, radix: 16) }
+            guard octets.count == 6 else { continue }
+            var paquet = Data(repeating: 0xFF, count: 6)
+            for _ in 0..<16 { paquet.append(contentsOf: octets) }
+            for cible in cibles {
+                let ports: [NWEndpoint.Port] = [9, 7]
+                for port in ports {
+                    let envoi = NWConnection(host: NWEndpoint.Host(cible), port: port, using: .udp)
+                    envoi.start(queue: .main)
+                    envoi.send(content: paquet, completion: .contentProcessed { _ in })
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { envoi.cancel() }
+                }
+            }
+        }
+    }
 
     /// Le message d'inscription, avec la clé déjà reçue de cette télé s'il y en a une.
     private func inscription() -> String {
@@ -124,6 +186,12 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         guard let sortie = try? JSONSerialization.data(withJSONObject: message),
               let texte = String(data: sortie, encoding: .utf8) else { return Tele.inscriptionNue }
         return texte
+    }
+
+    private func demander(_ id: String, _ uri: String, _ charge: [String: Any], sur tache: URLSessionWebSocketTask) {
+        let demande: [String: Any] = ["id": id, "type": "request", "uri": uri, "payload": charge]
+        if let sortie = try? JSONSerialization.data(withJSONObject: demande),
+           let ligne = String(data: sortie, encoding: .utf8) { envoyer(ligne, sur: tache) }
     }
 
     private func envoyer(_ texte: String, sur tache: URLSessionWebSocketTask) {
@@ -141,7 +209,15 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
                 case .failure(let erreur):
                     self.rompu(tache, erreur.localizedDescription)
                 case .success(let message):
-                    self.entendu = true
+                    if !self.entendu {
+                        self.entendu = true
+                        // La télé parle : on lui laisse une minute, le temps de l'accord à la télécommande.
+                        self.armer(60) { [weak self] in
+                            guard let self = self, self.tache === tache else { return }
+                            self.fermer()
+                            self.dire("erreur", "La télé n'a pas fini de répondre.")
+                        }
+                    }
                     if case .string(let texte) = message { self.lire(texte, de: tache) }
                     if self.tache === tache { self.ecouter(tache) }
                 }
@@ -149,16 +225,12 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         }
     }
 
-    /// La connexion est tombée. Avant tout message : on essaie l'autre porte, une fois ; sinon on le dit.
+    /// La connexion est tombée. Avant tout mot de la télé : c'est un essai muet, on recommence ; après : on le dit.
     private func rompu(_ tache: URLSessionWebSocketTask, _ raison: String) {
         guard self.tache === tache else { return }
+        if !entendu { return muet(raison) }
         fermer()
-        if chiffre && !entendu {
-            chiffre = false
-            return ouvrir()
-        }
-        dire("erreur", "La télé ne répond pas (" + raison + "). Est-elle allumée, et sur le même Wi-Fi ? "
-            + "Sinon : Réglages de l'iPhone → Confidentialité et sécurité → Réseau local, y autoriser cette app.")
+        dire("erreur", "La connexion à la télé s'est interrompue (" + raison + ").")
     }
 
     private func lire(_ texte: String, de tache: URLSessionWebSocketTask) {
@@ -169,21 +241,32 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
         let charge = message["payload"] as? [String: Any] ?? [:]
         if type == "registered" {
             if let cle = charge["client-key"] as? String { UserDefaults.standard.set(cle, forKey: cleGardee) }
-            let demande: [String: Any] = ["id": "lancer_0", "type": "request",
-                                          "uri": "ssap://system.launcher/launch", "payload": ["id": app]]
-            if let sortie = try? JSONSerialization.data(withJSONObject: demande),
-               let ligne = String(data: sortie, encoding: .utf8) { envoyer(ligne, sur: tache) }
+            // D'abord son adresse matérielle (pour la réveiller une autre fois), puis le lancement.
+            demander("reseau_0", "ssap://com.webos.service.connectionmanager/getinfo", [:], sur: tache)
+            demander("lancer_0", "ssap://system.launcher/launch", ["id": app], sur: tache)
         } else if type == "response" && id == "register_0" {
             if charge["pairingType"] as? String == "PROMPT" {
                 dire("accord", "Sur la télé : accepter la demande de connexion, à la télécommande.")
             }
+        } else if id == "reseau_0" {
+            // Refusée ou non : on n'en dit rien, le lancement ne dépend pas d'elle.
+            var macs: [String] = []
+            for bloc in ["wifiInfo", "wiredInfo"] {
+                if let mac = (charge[bloc] as? [String: Any])?["macAddress"] as? String,
+                   mac.split(separator: ":").count == 6, !macs.contains(mac) { macs.append(mac) }
+            }
+            if !macs.isEmpty { UserDefaults.standard.set(macs, forKey: macsGardees) }
+            if lancee { fermer() }
         } else if type == "response" && id == "lancer_0" {
-            fermer()
             if charge["returnValue"] as? Bool == false {
+                fermer()
                 dire("erreur", "La télé a refusé de lancer l'app : "
                     + (charge["errorText"] as? String ?? "raison non donnée") + ".")
             } else {
                 dire("lancee", "Lancée sur la télé.")
+                // On attend encore un instant la réponse sur son adresse matérielle, si elle n'est pas venue.
+                lancee = true
+                armer(3) { [weak self] in self?.fermer() }
             }
         } else if type == "error" {
             let raison = message["error"] as? String ?? "raison non donnée"
@@ -197,6 +280,7 @@ final class Tele: NSObject, WKScriptMessageHandler, URLSessionDelegate {
             }
         }
     }
+    private var lancee = false
 
     /// Ce qui se passe, rendu à la page : l'évènement `juclairian:tele`.
     private func dire(_ etat: String, _ message: String) {
