@@ -262,6 +262,55 @@ targets:
         ITSAppUsesNonExemptEncryption: false
     scheme: {}
 
+  # ── IMAGO ───────────────────────────────────────────────────────────────────────────────────
+  # La photothèque (`/photos/` du site, nommée Imago le 11/11/2026). La même coquille, SANS extension de partage :
+  # celle du dépôt ne reçoit que des liens, pas des photos. ⚠️ Sa fiche App Store Connect (« Imago Juclairian ») se
+  # crée À LA MAIN, une fois.
+  Imago:
+    type: application
+    platform: iOS
+    sources:
+      - Commun/Coquille
+      - Commun/Web
+      - Apps/Imago
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.juclairian.imago
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: Apple Distribution
+          PROVISIONING_PROFILE_SPECIFIER: match AppStore com.juclairian.imago
+    entitlements:
+      path: Plists/Imago.entitlements
+      properties:
+        aps-environment: production
+    info:
+      path: Plists/Imago-Info.plist
+      properties:
+        CFBundleDisplayName: Imago
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # L'adresse que la coquille ouvre : les albums.
+        JuclairianDepart: https://juclairian.com/photos/
+        JuclairianNotifications: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # Le dépôt de photos passe par le sélecteur d'iOS, qui propose aussi « Prendre une photo » : sans cette
+        # phrase, ce choix ferait planter l'app.
+        NSCameraUsageDescription: Pour prendre une photo et l'ajouter à Imago.
+        ITSAppUsesNonExemptEncryption: false
+    scheme: {}
+
   # ── NUMERIA ─────────────────────────────────────────────────────────────────────────────────
   # Les comptes. Son propre site (numeria.juclairian.com, dépôt juclairian-app), la même coquille, SANS
   # extension : rien ne se partage vers Numeria. Son import se fait par un fichier CSV (le sélecteur de

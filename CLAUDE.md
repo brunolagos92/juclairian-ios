@@ -30,6 +30,8 @@ envoie les autres et dit laquelle attend. Rien dans `Commun/` ne doit nommer une
 **Les apps** : **Orla** (`/orla/`, partage → `/orla/ajouter-lieu/`, et ses widgets), **Vela** (`/voyages/`, partage →
 `/ajouter-lieu/`, le choix du voyage puis de la Réserve ou de la journée), **Hora** (`/echeances/`, sans
 extension : aucune page de Hora ne reçoit un lien ; ni photo ni position, donc aucune phrase de permission)
+**Imago** (`/photos/`, la photothèque — 11/11/2026 ; sans extension : celle d'ici ne reçoit que des liens, pas
+des photos ; une phrase de permission pour l'appareil photo, que le sélecteur d'iOS propose au dépôt ; icône : `iconeImago`)
 et **Numeria** (`https://numeria.juclairian.com/`, son propre site, dépôt `juclairian-app` ; sans extension ;
 son import CSV passe par le sélecteur de fichiers, sans appareil photo) et **Electra**
 (`http://100.112.244.82:8321/` — elle ne tourne que sur le Mac de Bruno, que l'iPhone joint par **Tailscale** ;
