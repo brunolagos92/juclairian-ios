@@ -308,6 +308,13 @@ targets:
         # Le dépôt de photos passe par le sélecteur d'iOS, qui propose aussi « Prendre une photo » : sans cette
         # phrase, ce choix ferait planter l'app.
         NSCameraUsageDescription: Pour prendre une photo et l'ajouter à Imago.
+        # LANCER L'APP DE LA TÉLÉ (`Commun/Coquille/Tele.swift`) : la coquille parle à la télé sur le réseau de la
+        # maison. iOS pose la question une fois, avec cette phrase ; et la télé, jointe par son adresse, présente
+        # un certificat signé par elle-même — d'où l'exception, limitée au réseau local.
+        JuclairianTele: true
+        NSLocalNetworkUsageDescription: Pour lancer Imago sur la télé de la maison.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         ITSAppUsesNonExemptEncryption: false
     scheme: {}
 

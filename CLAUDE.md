@@ -59,6 +59,19 @@ reçoit comme un texte formaté et **plante** (« Formatted text for `descriptio
 lui demande ses widgets — et l'app **manque à la galerie**, sans autre signe (build 25 : l'iPhone redémarré n'y
 a rien fait ; la cause n'a été lue que par `diagnostic.yml`, dans le journal du simulateur).
 
+## Lancer une app sur la télé (Imago, 11/11/2026)
+
+« Aucun moyen de lancer l'app de la TV depuis l'iPhone ? » (Bruno). Une page web ne peut pas parler à la télé
+(LG webOS : `wss://<adresse>:3001`, certificat signé par elle-même, que Safari refuse) ; la coquille, si
+(`Commun/Coquille/Tele.swift`). Une app le peut quand son Info.plist porte `JuclairianTele` à vrai, avec
+`NSLocalNetworkUsageDescription` et `NSAppTransportSecurity → NSAllowsLocalNetworking`. La coquille ne décide
+rien : **le contrat** est en tête de `Tele.swift` — la page envoie `{ action: "lancer", adresse, app }` sur le
+canal `juclairianTele` et reçoit l'évènement `juclairian:tele` (`connexion`, `accord`, `lancee`, `erreur`). Elle
+ne se connecte qu'à une adresse IPv4 **privée**, à la demande d'une page du site. La télé demande son accord une
+fois, à l'écran ; sa clé est gardée dans l'app. ⚠️ **La télé doit être allumée** : la réveiller par le réseau
+demande une diffusion, qu'iOS réserve à un droit accordé par Apple (`com.apple.developer.networking.multicast`).
+⚠️ Écrit sans télé ni Mac : le protocole est recopié d'aiowebostv 1.0.2, la mise au point se fait avec Bruno.
+
 ## Les notifications (Electra, 28/10/2026)
 
 « Je veux juste les notifs » (Bruno), pour Electra d'abord ; puis « la possibilité pour toutes les apps. Après

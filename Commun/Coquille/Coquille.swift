@@ -42,6 +42,8 @@ struct Coquille: UIViewControllerRepresentable {
 final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     private let depart: URL
     private var vue: WKWebView!
+    /// Lancer une app sur la télé, pour l'app qui le demande (`Tele.swift`) ; pour les autres, rien n'est branché.
+    private let tele = Tele()
 
     init(depart: URL) {
         self.depart = depart
@@ -52,6 +54,7 @@ final class CoquilleController: UIViewController, WKNavigationDelegate, WKUIDele
     override func loadView() {
         vue = Site.vue(delegue: self)
         vue.allowsBackForwardNavigationGestures = true
+        if Tele.active { tele.brancher(vue, site: depart.host) }
         let rafraichir = UIRefreshControl()
         rafraichir.addTarget(self, action: #selector(recharger(_:)), for: .valueChanged)
         vue.scrollView.refreshControl = rafraichir
